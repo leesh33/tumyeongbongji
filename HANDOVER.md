@@ -18,13 +18,12 @@
 ## 데이터
 
 - `data/products.js` 제품 34종 = 과자 11 · 음료 9 · 라면·간편식 7 · 아기·키즈 7.
-- 과자 11종은 2026-11 **실제 영양성분 표기값(총 내용량 기준)** 으로 대조 완료. 근거 표는 `data/nutrition-sources.md`.
-- 음료·라면·키즈 23종은 이번에 재대조하지 않았습니다. 값이 의심되면 같은 방식(제조사 공식 제품정보 → 식약처 식품영양성분 DB 순)으로 확인하세요.
+- 34종 전부(과자 11 · 음료 9 · 라면·간편식 7 · 아기·키즈 7) 2026-11 **실제 영양성분 표기값(총 내용량 기준)** 으로 대조 완료. 근거 표는 `data/nutrition-sources.md`.
 - `weight`는 봉지 전체 중량, 영양값도 전체 기준입니다. 1회 제공량 기준 제품(예: 쵸코하임)은 총 내용량 기준으로 환산해 넣었습니다.
 
 ## 검증
 
-- `npm test`(= `node --test`) 37/37 통과. 실제 표기값 11종 회귀 테스트 + 열량-탄단지 정합성 테스트 포함.
+- `npm test`(= `node --test`) 38/38 통과. 실제 표기값 34종 회귀 테스트 + 열량-탄단지 정합성 테스트 포함.
 - 라이브 390×844(iPhone UA) Playwright 점검: 6종 상세 카드 값·환산 문구 일치, 콘솔/페이지 오류 0. 캡처: `downloads/snack-xray/label-check/*.png`, 대표 카드 `downloads/snack-xray/02-detail-card.png`.
 - 캡처 스크립트: `tools/final_shots.py`(라이브 전체), `tools/verify.py`(기능 점검), `tools/shots.py`(로컬).
   Chromium 실행에 `LD_LIBRARY_PATH=/workspace/.local/chromelibs/root/usr/lib/x86_64-linux-gnu:/workspace/.local/chromedeps/usr/lib/x86_64-linux-gnu:/workspace/.local/sysroot/usr/lib/x86_64-linux-gnu`가 필요했습니다.
@@ -33,7 +32,7 @@
 
 1. 성분표 사진 OCR로 숫자 자동 채우기(직접 입력 탭).
 2. 저당·대체 간식 자리에 제휴 링크 연결.
-3. 음료·라면·키즈 값 재대조 및 제품 추가.
+3. 제품 추가(저당·대체 간식 등) 및 리뉴얼 시 영양값 재대조.
 4. 공유 URL(카드 링크) · PWA 설치 유도.
 5. Vercel–GitHub 자동 배포 연결.
 
