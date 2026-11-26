@@ -10,6 +10,7 @@
 카드 한 장은 PNG로 저장하거나 공유할 수 있습니다.
 
 - 라이브: https://tumyeongbongji.vercel.app
+- 소스: https://github.com/leesh33/tumyeongbongji (public)
 
 ## 구성
 
