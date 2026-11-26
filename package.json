@@ -1,0 +1,11 @@
+{
+  "name": "tumyeongbongji",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "투명봉지 — 과자·음료 영양성분을 국자·각설탕·숟가락과 투명 봉지 단면으로 보여주는 웹앱",
+  "scripts": {
+    "test": "node --test",
+    "serve": "python3 -m http.server 4173"
+  }
+}

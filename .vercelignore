@@ -1,0 +1,8 @@
+downloads/
+tools/
+test/
+node_modules/
+.vercel/
+package.json
+package-lock.json
+*.md

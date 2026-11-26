@@ -1,0 +1,14 @@
+{
+  "name": "투명봉지",
+  "short_name": "투명봉지",
+  "description": "과자·음료 영양성분을 국자·각설탕·숟가락으로 바꿔 투명 봉지 단면으로 보여줍니다.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#EFE4D6",
+  "theme_color": "#EFE4D6",
+  "lang": "ko",
+  "icons": [
+    { "src": "/icon-180.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}
