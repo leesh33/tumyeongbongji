@@ -25,7 +25,7 @@ lib/stack.js          층 무게·비율 계산, 카테고리별 기본 원재�
 lib/model.js          제품 → 카드 모델
 lib/card-svg.js       카드 SVG 생성 (봉지·층·라벨·아이콘)
 lib/text.js           글자 폭 어림·줄바꿈 (SVG에는 자동 줄바꿈이 없음)
-test/*.test.js        node --test 단위 테스트 37개
+test/*.test.js        node --test 단위 테스트 38개
 data/nutrition-sources.md  34종 영양값 대조표·출처 (2026-11)
 tools/                로컬 확인용 스크립트·스크린샷 (배포 제외)
 ```
