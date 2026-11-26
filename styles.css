@@ -657,6 +657,90 @@ a {
   place-items: center;
 }
 
+/* 성분표 자동 인식 */
+.ocr-box {
+  margin-top: 10px;
+}
+
+.ocr-btn {
+  width: 100%;
+  min-height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 12px 14px;
+  border-radius: 13px;
+  background: var(--green);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 800;
+  box-shadow: 0 6px 14px rgba(79, 107, 72, 0.22);
+}
+
+.ocr-btn:disabled {
+  opacity: 0.7;
+  box-shadow: none;
+  cursor: default;
+}
+
+.ocr-status {
+  margin: 9px 0 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #eef1e6;
+  color: #40563b;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.55;
+  text-align: left;
+}
+
+.ocr-status.busy {
+  background: #f4efe4;
+  color: var(--ink-2);
+}
+
+.ocr-status.busy::before {
+  content: '';
+  display: inline-block;
+  width: 11px;
+  height: 11px;
+  margin-right: 7px;
+  vertical-align: -1px;
+  border-radius: 50%;
+  border: 2px solid var(--green);
+  border-top-color: transparent;
+  animation: ocr-spin 0.8s linear infinite;
+}
+
+.ocr-status.error {
+  background: #f8e6df;
+  color: #8a3b22;
+}
+
+.ocr-status[hidden] {
+  display: none;
+}
+
+@keyframes ocr-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ocr-status.busy::before {
+    animation: none;
+  }
+}
+
+.field input.ocr-filled,
+.field select.ocr-filled {
+  background: #f3f6ea;
+  border-color: #b9c6a6;
+}
+
 .field {
   margin-bottom: 11px;
 }
