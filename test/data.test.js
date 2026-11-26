@@ -74,6 +74,47 @@ test('실제 영양성분 표기값을 반영한 과자 11종', () => {
   }
 });
 
+test('실제 영양성분 표기값을 반영한 음료·라면·키즈 23종', () => {
+  // 2026-11 제조사 공식 제품정보·식약처 DB·공식 판매페이지 표기(총 내용량 기준). 출처: data/nutrition-sources.md
+  const expected = [
+    ['coca-cola', 355, 152, 11, 38, 0, 38, 0],
+    ['coke-zero', 355, 0, 22, 0, 0, 0, 0],
+    ['banana-milk', 240, 208, 110, 27, 8, 27, 7],
+    ['starbucks-double-shot', 200, 115, 85, 19, 2.4, 20, 3.8],
+    ['starbucks-americano', 200, 20, 16, 0, 0, 5, 0],
+    ['gatorade', 600, 160, 300, 39, 0, 40, 0],
+    ['choco-emong', 250, 205, 110, 27, 6, 30, 7.5],
+    ['sunkist-orange', 180, 85, 5, 18, 0, 21, 0],
+    ['pocari-sweat', 500, 120, 250, 29, 0, 30, 0],
+    ['shin-ramyun', 120, 500, 1790, 4, 16, 79, 10],
+    ['buldak', 140, 530, 1280, 7, 16, 85, 12],
+    ['jjapageti', 140, 610, 1100, 7, 20, 96, 11],
+    ['cup-noodle', 37.8, 120, 890, 3, 0, 29, 1],
+    ['bibim-myeon', 130, 525, 1090, 12, 19, 80, 9],
+    ['haetban', 210, 315, 15, 0, 1.5, 68, 6],
+    ['tuna-gimbap', 112, 224, 397, 1, 8, 32, 6],
+    ['pororo-barley', 220, 0, 5, 0, 0, 0, 0],
+    ['pororo-apple', 235, 75, 30, 11, 0, 20, 0],
+    ['yomi-tteokppong', 30, 110, 15, 0, 0, 26, 2],
+    ['baby-cheese', 18, 61, 47, 0, 5.2, 0, 3.5],
+    ['maeil-milk', 200, 125, 100, 9, 7, 9, 6],
+    ['iyum-apple-ring', 30, 110, 5, 0, 0.2, 25, 2],
+    ['kids-yogurt', 80, 50, 25, 7, 0, 11, 1],
+  ];
+  assert.equal(expected.length, 23);
+  for (const [id, weight, kcal, sodium, sugar, fat, carbs, protein] of expected) {
+    const p = productById(id);
+    assert.ok(p, id);
+    assert.equal(p.weight, weight, `${id}.weight`);
+    assert.equal(p.kcal, kcal, `${id}.kcal`);
+    assert.equal(p.sodium, sodium, `${id}.sodium`);
+    assert.equal(p.sugar, sugar, `${id}.sugar`);
+    assert.equal(p.fat, fat, `${id}.fat`);
+    assert.equal(p.carbs, carbs, `${id}.carbs`);
+    assert.equal(p.protein, protein, `${id}.protein`);
+  }
+});
+
 test('열량이 탄수·단백·지방 계산값과 크게 어긋나지 않는다', () => {
   for (const p of PRODUCTS) {
     const macro = p.carbs * 4 + p.protein * 4 + p.fat * 9;
