@@ -1,7 +1,7 @@
-"""투명봉지 소셜 로그인·기명 댓글 검증 (로컬/라이브 공용).
+"""속보이네 소셜 로그인·기명 댓글 검증 (로컬/라이브 공용).
 
   python3 tools/verify_auth.py [base_url] [tag]
-  (기본: https://tumyeongbongji.vercel.app/ live)
+  (기본: https://sokboine.vercel.app/ live)
 
 확인하는 것
 - 홈 상단 [로그인] 버튼, 390px 가로 넘침 0
@@ -27,7 +27,7 @@ IPHONE_UA = (
     '(KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1'
 )
 
-BASE = (sys.argv[1] if len(sys.argv) > 1 else 'https://tumyeongbongji.vercel.app/').rstrip('/') + '/'
+BASE = (sys.argv[1] if len(sys.argv) > 1 else 'https://sokboine.vercel.app/').rstrip('/') + '/'
 TAG = sys.argv[2] if len(sys.argv) > 2 else 'live'
 DETAIL = '#/p/choco-heim'
 USER_ID = 'test-user-1'

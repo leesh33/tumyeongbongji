@@ -1,6 +1,6 @@
 {
-  "name": "투명봉지",
-  "short_name": "투명봉지",
+  "name": "속보이네",
+  "short_name": "속보이네",
   "description": "과자·음료 영양성분을 국자·각설탕·숟가락으로 바꿔 투명 봉지 단면으로 보여줍니다.",
   "start_url": "/",
   "display": "standalone",

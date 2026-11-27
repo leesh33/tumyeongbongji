@@ -1,4 +1,4 @@
-# 투명봉지
+# 속보이네
 
 과자·음료·라면·키즈 간식의 영양성분표를 **눈에 보이는 단위**로 바꿔 보여주는 웹앱입니다.
 
@@ -9,7 +9,7 @@
 그리고 그 값들을 **투명 봉지 단면**에 무거운 층부터 아래에서 위로 쌓아 보여줍니다.
 카드 한 장은 PNG로 저장하거나 공유할 수 있습니다.
 
-- 라이브: https://tumyeongbongji.vercel.app
+- 라이브: https://sokboine.vercel.app
 - 소스: https://github.com/leesh33/tumyeongbongji (public)
 
 ## 구성

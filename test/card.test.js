@@ -14,7 +14,7 @@ test('카드는 SVG 문자열로 만들어진다', () => {
   assert.equal(width, 358);
   assert.ok(height > 600 && height < 900, `height=${height}`);
   assert.ok(svg.includes('바나나킥'));
-  assert.ok(svg.includes('투명봉지'));
+  assert.ok(svg.includes('속보이네'));
 });
 
 test('깨진 값이 들어가지 않는다', () => {

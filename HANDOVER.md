@@ -1,8 +1,8 @@
-# 인수인계 — 투명봉지 (2026-11-27)
+# 인수인계 — 속보이네 (2026-11-27)
 
 과자·음료·라면·키즈 간식의 영양성분표를 **국자·각설탕·밥숟가락** 단위와 **투명 봉지 단면**으로 보여주는 정적 웹앱.
 
-- 라이브(프로덕션): https://tumyeongbongji.vercel.app
+- 라이브(프로덕션): https://sokboine.vercel.app
 - 저장소: https://github.com/leesh33/tumyeongbongji (public, `main`)
 - Vercel 프로젝트: `tumyeongbongji` (`prj_6JRWVoy7RbyaacGYE4QuUo54vx2Y`, 개인 계정 leesh33)
 - 현재 상태: 2026-11-27 Vercel 프로젝트에 GitHub(`leesh33/tumyeongbongji`) 자동 배포를 연결했습니다. 이후 `main`에 머지되는 커밋은 Vercel이 자동 배포합니다. 첫 자동 배포에는 PR #1(23종 성분표 수정)과 PR #2(성분표 OCR)가 함께 들어갑니다.
@@ -46,7 +46,7 @@
 - **게시판(`#/board`)**: 홈 우측 상단 `제안·제보` 버튼. 분류 필터(전체·제품 추가 요청·성분 수정 제보·기능 제안, `#/board/<분류>` 딥링크), 최신순 목록, 상태 배지(접수됨/반영됨), 글쓰기 폼(제목 2~80·내용 2~600·닉네임 1~20 또는 익명), 글자 수 카운터, 중복 제출 방지(30초), 실패 시 한국어 안내, 빈 상태·오류 상태 + 다시 불러오기.
 - **제품별 댓글**: 제품 상세(`#/p/:id`) 하단. 오래된 순, 댓글 1~300자, 등록 즉시 반영, 빈 상태("첫 번째 한마디를 남겨 보세요"), 오류 시 재시도. 직접 입력 카드(`#/c`)에는 붙지 않음.
 - **저장소**: Supabase `public.tumyeongbongji_feedback` / `public.tumyeongbongji_comments`. `anon`에 **SELECT·INSERT만** GRANT(2026-11-27 추가), UPDATE·DELETE는 42501로 차단 확인. 접속 값은 `config.js`의 `SUPABASE`.
-  - 주의: 이 프로젝트(ref `nhdzexqkibotubfovbpa`)는 대시보드상 이름이 **꼬리핀**입니다. 꼬리핀과 같은 Supabase 프로젝트 안에 투명봉지용 테이블 두 개가 따로 들어 있습니다.
+  - 주의: 이 프로젝트(ref `nhdzexqkibotubfovbpa`)는 대시보드상 이름이 **꼬리핀**입니다. 꼬리핀과 같은 Supabase 프로젝트 안에 속보이네용 테이블 두 개가 따로 들어 있습니다.
   - 공개 키는 새 방식 `sb_publishable_…`입니다. 예전에 브리프에 적혀 있던 `anon` JWT는 ref가 `…ovbpia`로 잘못 적혀 있어 서버가 `Invalid API key`로 거절했습니다.
 - **UX 전수 점검에서 고친 것**
   - 카드 SVG 긴 층 이름이 카드 오른쪽으로 잘리던 문제(이름/값 두 줄 배치 + 라벨 간격 자동 확대)

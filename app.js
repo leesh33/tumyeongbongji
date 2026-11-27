@@ -821,7 +821,7 @@ function renderCustomForm() {
         <textarea id="f-ing" name="ingredients" rows="2" placeholder="예: 옥수수, 설탕, 팜유, 정제소금"></textarea>
         <p class="hint">적지 않으면 종류에 맞는 기본 원재료로 쌓아요.</p>
       </div>
-      <button class="submit" type="submit">투명봉지로 보기</button>
+      <button class="submit" type="submit">속보이네로 보기</button>
       <p class="form-note">입력한 값으로만 계산해요. 저장되거나 밖으로 나가지 않습니다.</p>
     </form>
   `;
@@ -2528,8 +2528,8 @@ async function exportCard(svgEl, model, mode) {
   try {
     const blob = await svgToBlob(svgEl, 1080);
     if (!blob) throw new Error('no-blob');
-    const safeName = model.name.replace(/[\\/:*?"<>|]/g, '').slice(0, 30) || '투명봉지';
-    const filename = `투명봉지_${safeName}.png`;
+    const safeName = model.name.replace(/[\\/:*?"<>|]/g, '').slice(0, 30) || '속보이네';
+    const filename = `속보이네_${safeName}.png`;
     const file = new File([blob], filename, { type: 'image/png' });
 
     if (mode === 'share' && navigator.canShare && navigator.canShare({ files: [file] })) {
