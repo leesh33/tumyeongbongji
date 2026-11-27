@@ -4,3 +4,4 @@ node_modules/
 downloads/shots/
 downloads/verify-*.json
 __pycache__/
+downloads/audit/
