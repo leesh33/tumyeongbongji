@@ -9,7 +9,7 @@
 그리고 그 값들을 **투명 봉지 단면**에 무거운 층부터 아래에서 위로 쌓아 보여줍니다.
 카드 한 장은 PNG로 저장하거나 공유할 수 있습니다.
 
-- 라이브: https://sokboine.vercel.app
+- 라이브: https://sokboyne.vercel.app
 - 소스: https://github.com/leesh33/tumyeongbongji (public)
 
 ## 구성

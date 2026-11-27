@@ -2,10 +2,11 @@
 
 과자·음료·라면·키즈 간식의 영양성분표를 **국자·각설탕·밥숟가락** 단위와 **투명 봉지 단면**으로 보여주는 정적 웹앱.
 
-- 라이브(프로덕션): https://sokboine.vercel.app
+- 라이브(프로덕션): https://sokboyne.vercel.app
 - 저장소: https://github.com/leesh33/tumyeongbongji (public, `main`)
 - Vercel 프로젝트: `tumyeongbongji` (`prj_6JRWVoy7RbyaacGYE4QuUo54vx2Y`, 개인 계정 leesh33)
 - 현재 상태: 2026-11-27 Vercel 프로젝트에 GitHub(`leesh33/tumyeongbongji`) 자동 배포를 연결했습니다. 이후 `main`에 머지되는 커밋은 Vercel이 자동 배포합니다. 첫 자동 배포에는 PR #1(23종 성분표 수정)과 PR #2(성분표 OCR)가 함께 들어갑니다.
+- 2026-11-27 이름·도메인·폰트 변경: 앱 이름 **속보이네**(구 투명봉지), 라이브 주소 **https://sokboyne.vercel.app** — Vercel 프로젝트 `tumyeongbongji`의 Production 도메인으로 추가했고 기존 `tumyeongbongji.vercel.app`도 같은 배포를 계속 서빙합니다. 화면·카드 폰트는 **고운돋움(Gowun Dodum)**. Supabase(꼬리핀과 공유하는 ref `nhdzexqkibotubfovbpa`) Authentication > URL Configuration > Redirect URLs에 `https://sokboyne.vercel.app/**`를 추가했습니다(기존 6개 항목과 Site URL `https://ggoripin.vercel.app`은 그대로). 저장소명과 Supabase 테이블명 `tumyeongbongji_*`는 유지합니다.
 
 ## 기술 구성
 
