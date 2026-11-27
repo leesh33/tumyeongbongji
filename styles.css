@@ -322,6 +322,36 @@ a {
   margin-top: 2px;
 }
 
+/* 제조사 미니 심볼 + 이름 딱지 */
+.brand-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  margin-bottom: 3px;
+  padding: 1px 7px 1px 3px;
+  background: #faf4ea;
+  border: 1px solid #e3d6c4;
+  border-radius: 999px;
+  color: #7a5f45;
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 1.5;
+  letter-spacing: 0;
+  vertical-align: middle;
+}
+
+.brand-badge .bsym {
+  display: block;
+  flex: 0 0 auto;
+}
+
+.brand-badge .bname {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .mini {
   display: flex;
   flex-direction: column;
@@ -485,6 +515,10 @@ a {
   font-style: normal;
   font-size: 11px;
   color: var(--muted);
+}
+
+.alt-name .brand-badge {
+  margin: 2px 0 0;
 }
 
 .alt-bars {

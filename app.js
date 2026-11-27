@@ -18,6 +18,7 @@ import {
 } from './lib/board.js';
 import { boardApi, friendlyMessage } from './lib/supabase.js';
 import { buildModel } from './lib/model.js';
+import { brandBadge } from './lib/brand-badge.js';
 import { cardSVG } from './lib/card-svg.js';
 import { fmt, fmtAmount, toCubes, toLadle, toSpoons } from './lib/units.js';
 import { lowSugarAlternatives } from './lib/stack.js';
@@ -148,8 +149,9 @@ function renderHomeFeed() {
       return `<li><a class="item" href="#/p/${p.id}">
         <span class="thumb" style="${thumbStyle(m)}"></span>
         <span class="info">
+          ${brandBadge(p.brand)}
           <b>${esc(p.name)}</b>
-          <em>${esc(p.brand)} · ${fmtAmount(p.weight)}${p.unit} · ${p.kcal} kcal</em>
+          <em>${fmtAmount(p.weight)}${p.unit} · ${p.kcal} kcal</em>
         </span>
         <span class="mini">
           <i class="${Number(sodium) >= 2 ? 'hot' : ''}">나 ${sodium}국자</i>
@@ -252,7 +254,7 @@ function renderDetail(product) {
   const altRows = alts
     .map(
       (a) => `<div class="alt-row">
-        <span class="alt-name"><b>${esc(a.name)}</b><em>${esc(a.brand)}</em></span>
+        <span class="alt-name"><b>${esc(a.name)}</b>${brandBadge(a.brand)}</span>
         <span class="alt-bars">
           <span class="bar"><span style="width:${((a.sugar100 / maxSugar) * 100).toFixed(0)}%"></span></span>
           <span class="bar sodium"><span style="width:${((a.sodium100 / maxSodium) * 100).toFixed(0)}%"></span></span>

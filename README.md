@@ -24,11 +24,12 @@ lib/units.js          단위 환산 (mg→국자, g→각설탕, g→스푼)
 lib/nutrition-ocr.js  성분표 OCR 텍스트 파서 (단위·%·쉼표·오인식 보정)
 lib/stack.js          층 무게·비율 계산, 카테고리별 기본 원재료, 대체 간식
 lib/model.js          제품 → 카드 모델
+lib/brand-badge.js    제조사 미니 심볼(SVG) + 이름 딱지 (상표권 안전 자체 도형)
 lib/card-svg.js       카드 SVG 생성 (봉지·층·라벨·아이콘)
 lib/text.js           글자 폭 어림·줄바꿈 (SVG에는 자동 줄바꿈이 없음)
 lib/board.js          게시판·댓글 순수 로직 (글자 수 검증, 상대 시간, 정렬)
 lib/supabase.js       Supabase REST 클라이언트 (fetch만 사용, 오류→한국어 안내)
-test/*.test.js        node --test 단위 테스트 79개
+test/*.test.js        node --test 단위 테스트 89개
 data/nutrition-sources.md  34종 영양값 대조표·출처 (2026-11)
 tools/                로컬 확인용 스크립트·스크린샷 (배포 제외)
 ```
