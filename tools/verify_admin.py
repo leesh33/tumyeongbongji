@@ -1,7 +1,7 @@
 """속보이네 어드민(#/admin)·아이템 번호·성분·대체상품 링크 검증 (로컬/라이브 공용).
 
   python3 tools/verify_admin.py [base_url] [tag]
-  (기본: https://sokboine.vercel.app/ live)
+  (기본: https://sokboyne.vercel.app/ live)
 """
 import json
 import sys
@@ -19,7 +19,7 @@ IPHONE_UA = (
     '(KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1'
 )
 
-BASE = (sys.argv[1] if len(sys.argv) > 1 else 'https://sokboine.vercel.app/').rstrip('/') + '/'
+BASE = (sys.argv[1] if len(sys.argv) > 1 else 'https://sokboyne.vercel.app/').rstrip('/') + '/'
 TAG = sys.argv[2] if len(sys.argv) > 2 else 'live'
 ADMIN_EMAIL = 'andy.leesh33@gmail.com'
 USER_ID = 'test-admin-1'

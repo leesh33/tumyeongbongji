@@ -27,7 +27,7 @@ import {
 
 const BASE = 'https://proj.supabase.co';
 const KEY = 'sb_publishable_test';
-const REDIRECT = 'https://sokboine.vercel.app/';
+const REDIRECT = 'https://sokboyne.vercel.app/';
 
 function jsonResponse(body, status = 200) {
   return {
@@ -48,7 +48,7 @@ function makeClient({ handlers = {}, storage = memoryStorage(), hash = '#/p/choc
     navigate: async (href) => {
       navigations.push(href);
     },
-    location: { origin: 'https://sokboine.vercel.app', pathname: '/', hash, search: '' },
+    location: { origin: 'https://sokboyne.vercel.app', pathname: '/', hash, search: '' },
     fetchImpl: async (url, init) => {
       calls.push({ url, init });
       for (const [needle, handler] of Object.entries(handlers)) {
@@ -168,7 +168,7 @@ test('콜백 파라미터 읽기와 주소 정리', () => {
   assert.equal(hasAuthParams('?foo=1'), false);
   assert.equal(hasAuthParams('?error=access_denied'), true);
 
-  const cleaned = cleanCallbackUrl('https://sokboine.vercel.app/?code=abc&state=xyz#/p/choco-heim');
+  const cleaned = cleanCallbackUrl('https://sokboyne.vercel.app/?code=abc&state=xyz#/p/choco-heim');
   assert.equal(cleaned, '/#/p/choco-heim');
   assert.equal(cleanCallbackUrl('not a url'), '/');
 });

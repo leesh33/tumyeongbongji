@@ -20,7 +20,7 @@ IPHONE_UA = (
     'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 '
     '(KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1'
 )
-BASE = 'https://sokboine.vercel.app/'
+BASE = 'https://sokboyne.vercel.app/'
 
 TITLE = '성분표 사진 인식이 잘 되네요'
 BODY = '매번 성분표를 직접 적기 번거로웠는데 사진으로 채워지니 편해요.'
