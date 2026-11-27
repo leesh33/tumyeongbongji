@@ -77,14 +77,63 @@ test('댓글 목록: 제품 아이디를 인코딩하고 오래된 순', async (
   const query = new URL(calls[0].url).searchParams;
   assert.equal(query.get('product_id'), 'eq.choco heim&x=1');
   assert.equal(query.get('order'), 'created_at.asc');
-  assert.equal(query.get('select'), 'id,product_id,nickname,body,created_at');
+  assert.equal(query.get('select'), 'id,product_id,nickname,body,user_id,created_at');
 });
 
-test('댓글 등록: product_id로 POST하고 행을 돌려준다', async () => {
-  const { api, calls } = apiWith(() => jsonResponse([{ id: 'c2', product_id: 'chocoheim', nickname: '익명', body: '굿', created_at: 'x' }], 201));
-  const row = await api.createComment({ productId: 'chocoheim', nickname: '익명', body: '굿' });
+test('댓글 등록: 로그인 토큰·user_id를 실어 POST하고 행을 돌려준다', async () => {
+  const { api, calls } = apiWith(() => jsonResponse([{ id: 'c2', product_id: 'chocoheim', nickname: '수진', body: '굿', user_id: 'u-1', created_at: 'x' }], 201));
+  const row = await api.createComment(
+    { productId: 'chocoheim', nickname: '수진', body: '굿', userId: 'u-1' },
+    { accessToken: 'user-token' },
+  );
   assert.equal(row.id, 'c2');
-  assert.deepEqual(JSON.parse(calls[0].init.body), { product_id: 'chocoheim', nickname: '익명', body: '굿' });
+  assert.equal(calls[0].init.headers.Authorization, 'Bearer user-token');
+  assert.deepEqual(JSON.parse(calls[0].init.body), { product_id: 'chocoheim', nickname: '수진', body: '굿', user_id: 'u-1' });
+});
+
+test('댓글 등록: 로그인 토큰이 없으면 요청을 보내지 않고 login 오류', async () => {
+  const { api, calls } = apiWith(() => jsonResponse([], 201));
+  await assert.rejects(
+    () => api.createComment({ productId: 'chocoheim', nickname: '수진', body: '굿', userId: 'u-1' }),
+    (err) => err instanceof BoardError && err.kind === 'login' && /로그인/.test(err.message),
+  );
+  assert.equal(calls.length, 0);
+});
+
+test('댓글 등록: user_id가 없으면 validation 오류', async () => {
+  const { api } = apiWith(() => jsonResponse([], 201));
+  await assert.rejects(
+    () => api.createComment({ productId: 'chocoheim', nickname: '수진', body: '굿' }, { accessToken: 't' }),
+    (err) => err instanceof BoardError && err.kind === 'validation',
+  );
+});
+
+test('내 댓글 삭제: 토큰과 id 조건으로 DELETE하고, 지워졌는지 돌려준다', async () => {
+  const { api, calls } = apiWith(() => jsonResponse([{ id: 'c1' }]));
+  const removed = await api.deleteComment('c1', { accessToken: 'user-token' });
+  assert.equal(removed, true);
+  const { url, init } = calls[0];
+  assert.equal(init.method, 'DELETE');
+  assert.equal(init.headers.Authorization, 'Bearer user-token');
+  assert.equal(init.headers.Prefer, 'return=representation');
+  const query = new URL(url).searchParams;
+  assert.equal(query.get('id'), 'eq.c1');
+  assert.equal(query.get('select'), 'id');
+  assert.equal(init.body, undefined);
+});
+
+test('내 댓글 삭제: 지워진 행이 없으면 false (남의 댓글·이미 삭제)', async () => {
+  const { api } = apiWith(() => jsonResponse([]));
+  assert.equal(await api.deleteComment('c9', { accessToken: 'user-token' }), false);
+});
+
+test('내 댓글 삭제: 로그인 토큰이 없으면 보내지 않고 login 오류', async () => {
+  const { api, calls } = apiWith(() => jsonResponse([]));
+  await assert.rejects(
+    () => api.deleteComment('c1'),
+    (err) => err instanceof BoardError && err.kind === 'login',
+  );
+  assert.equal(calls.length, 0);
 });
 
 test('등록 응답에 id가 없으면 response 오류', async () => {

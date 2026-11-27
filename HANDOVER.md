@@ -61,3 +61,21 @@
   - 제보 링크·터치 영역 확대, 화면 전환 시 제목으로 초점 이동(화면낭독기)
 - **테스트**: `node --test` **79/79 통과**(board 15개, supabase 10개 추가).
 - **점검 스크립트**: `tools/audit_ux.py` — 390×844(+데스크톱)에서 홈·검색·상세·댓글·게시판·직접 입력·PNG 저장을 실제로 눌러 보고, Supabase는 메모리 목으로 가로챕니다. XSS 주입·오류 상태·빈 상태·가로 넘침·터치 영역까지 확인합니다.
+
+## 2026-11-27 추가 — 카카오·구글·애플 로그인 · 기명 댓글
+
+- **로그인**: 외부 SDK 없이 `lib/auth.js`가 Supabase GoTrue OAuth(**PKCE, flow_type=pkce**)를 직접 다룹니다.
+  - `code_verifier`(48바이트 난수, base64url) → `localStorage` → `S256 code_challenge` → `/auth/v1/authorize?provider={kakao|google|apple}`
+  - 돌아올 화면 해시(`#/p/choco-heim` 등)도 저장해 두고, 콜백 `?code=`를 `POST /auth/v1/token?grant_type=pkce`(`auth_code`+`code_verifier`)로 교환한 뒤 원래 화면으로 복원하면서 주소창의 `?code=`를 지웁니다.
+  - 만료 60초 전부터 `refresh_token` 자동 갱신, 로그아웃은 `/auth/v1/logout` 후 기기 세션 삭제.
+- **프로필**: `public.tumyeongbongji_profiles`(user_id PK, nickname 1~20자, provider). OAuth `user_metadata`(nickname·name·full_name·preferred_username·이메일 앞부분)에서 첫 닉네임을 만들고, 처음 로그인하면 upsert(merge-duplicates)로 한 줄 만듭니다. 상단 닉네임 칩 → 닉네임 변경·로그아웃 시트.
+- **기명 댓글**: 목록은 누구나 읽고, 작성·삭제는 로그인한 본인만.
+  - `tumyeongbongji_comments.user_id` 추가, `anon`의 INSERT/UPDATE/DELETE 회수, `authenticated`에 INSERT·DELETE만 GRANT.
+  - 정책: INSERT `with check (auth.uid() = user_id)`, DELETE `using (auth.uid() = user_id)`, UPDATE 정책 없음(차단 유지).
+  - 앱은 `Authorization: Bearer <user_access_token>`으로 보내고, 내 댓글에만 `[삭제]` 버튼이 붙습니다(RLS가 최종 판단).
+  - 비로그인 화면은 입력 폼 대신 "기명으로 댓글을 남기려면 로그인이 필요해요." + 카카오·구글·애플 로그인 버튼.
+- **게시판(제안·제보)** 은 그대로 익명 작성 가능하며, 로그인했으면 닉네임 칸이 내 닉네임으로 미리 채워집니다.
+- **적용한 SQL**: `tools/migrations/2026-11-27-auth-comments.sql` (Supabase 프로젝트 `nhdzexqkibotubfovbpa`, 꼬리핀과 공유 — `tumyeongbongji_*`만 변경).
+- **테스트**: `node --test` **127/127 통과**(`test/auth.test.js` 27개 추가: PKCE·콜백·세션 갱신·닉네임·프로필 upsert, `test/supabase.test.js`에 기명 등록·삭제·비로그인 차단 5개 추가).
+- **검증 스크립트**: `tools/verify_auth.py [base_url] [tag]` — 390×844·데스크톱에서 로그인 시트(3종 버튼·색), 실제 authorize URL(PKCE), 비로그인 댓글 가드, 로그인 상태(세션 주입+응답 목)에서 기명 등록 헤더·user_id·삭제, 프로필 시트, 가로 넘침·콘솔 오류를 확인합니다. 스크린샷은 `verification/tumyeongbongji/auth-*.png`.
+- **남은 확인**: 실제 카카오·구글·애플 계정으로 로그인해 댓글을 남기는 실측은 사용자 계정이 필요해 직접 확인해야 합니다(Supabase 쪽 프로바이더 3종은 302로 각 provider authorize 페이지까지 넘어가는 것 확인).
