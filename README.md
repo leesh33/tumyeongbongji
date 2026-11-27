@@ -28,8 +28,9 @@ lib/brand-badge.js    제조사 미니 심볼(SVG) + 이름 딱지 (상표권 �
 lib/card-svg.js       카드 SVG 생성 (봉지·층·라벨·아이콘)
 lib/text.js           글자 폭 어림·줄바꿈 (SVG에는 자동 줄바꿈이 없음)
 lib/board.js          게시판·댓글 순수 로직 (글자 수 검증, 상대 시간, 정렬)
+lib/auth.js           Supabase GoTrue 소셜 로그인(OAuth+PKCE)·세션·프로필 (fetch만 사용)
 lib/supabase.js       Supabase REST 클라이언트 (fetch만 사용, 오류→한국어 안내)
-test/*.test.js        node --test 단위 테스트 89개
+test/*.test.js        node --test 단위 테스트 127개
 data/nutrition-sources.md  34종 영양값 대조표·출처 (2026-11)
 tools/                로컬 확인용 스크립트·스크린샷 (배포 제외)
 ```
@@ -66,9 +67,26 @@ node --test
 - 제품 상세(`#/p/:id`) 아래 **아이템별 댓글**: 오래된 순 목록, 댓글 1~300자, 등록 즉시 반영, 빈 상태 안내
 - 사용자가 쓴 글은 모두 `textContent`로 그려 XSS가 실행되지 않습니다
 
-저장소는 Supabase REST(`/rest/v1`)입니다. 테이블은 `public.tumyeongbongji_feedback`과 `public.tumyeongbongji_comments`이고,
-RLS로 `anon`에 **SELECT·INSERT만** 허용합니다(UPDATE·DELETE 차단). 접속 값은 `config.js`의 `SUPABASE`에 있으며
-공개(publishable) 키라서 브라우저에 실려 나가도 되는 값입니다. 비밀 키(service_role)는 어디에도 넣지 않습니다.
+저장소는 Supabase REST(`/rest/v1`)입니다. 테이블은 `public.tumyeongbongji_feedback`, `public.tumyeongbongji_comments`,
+`public.tumyeongbongji_profiles`(로그인 닉네임)이고, RLS로
+- 게시판: `anon`에 **SELECT·INSERT** (익명 허용)
+- 댓글: SELECT는 누구나, **INSERT·DELETE는 로그인한 본인만**(`auth.uid() = user_id`), UPDATE는 차단
+
+합니다. 접속 값은 `config.js`의 `SUPABASE`에 있으며 공개(publishable) 키라서 브라우저에 실려 나가도 되는 값입니다.
+비밀 키(service_role)는 어디에도 넣지 않습니다.
+
+## 로그인(카카오·구글·애플) · 기명 댓글
+
+영양정보 조회·저장·비교는 로그인 없이 그대로 쓸 수 있고, **댓글만 기명**으로 남깁니다.
+
+- 홈·상세 오른쪽 위 `로그인` → 카카오(`#FEE500`)·구글·애플 버튼 시트
+- Supabase GoTrue OAuth를 SDK 없이 **PKCE(flow_type=pkce, S256)** 로 직접 구현 (`lib/auth.js`)
+  - `code_verifier` → `localStorage` → `/auth/v1/authorize` → 콜백 `?code=`를 `/auth/v1/token?grant_type=pkce`로 교환
+  - 로그인 전 화면 해시를 기억해 두고 돌아오면 그 화면으로 복귀, `?code=`는 주소창에서 제거
+  - 만료 60초 전 자동 refresh, 로그아웃은 `/auth/v1/logout`
+- 처음 로그인하면 `tumyeongbongji_profiles`에 닉네임 한 줄을 만들고(카카오·구글·애플 프로필 이름), 상단 닉네임 칩에서 **닉네임 변경·로그아웃**
+- 댓글은 `Authorization: Bearer <user_access_token>`으로 저장하고, 내 댓글에만 `[삭제]`가 붙습니다(최종 판단은 RLS)
+- 적용한 SQL: `tools/migrations/2026-11-27-auth-comments.sql`
 
 ## 성분표 사진 자동 인식
 

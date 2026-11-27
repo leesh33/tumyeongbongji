@@ -16,7 +16,18 @@ import {
   validateComment,
   validateFeedback,
 } from './lib/board.js';
-import { boardApi, friendlyMessage } from './lib/supabase.js';
+import { BoardError, boardApi, friendlyMessage } from './lib/supabase.js';
+import {
+  NICKNAME_MAX,
+  PROVIDERS,
+  cleanCallbackUrl,
+  createAuthClient,
+  ensureProfile,
+  friendlyAuthMessage,
+  isValidNickname,
+  nicknameFromUser,
+  sanitizeNickname,
+} from './lib/auth.js';
 import { buildModel } from './lib/model.js';
 import { brandBadge } from './lib/brand-badge.js';
 import { cardSVG } from './lib/card-svg.js';
@@ -47,6 +58,32 @@ const board = {
   token: 0,
   draft: { category: 'new_product', title: '', body: '', nickname: '' },
 };
+
+// 기명 댓글용 로그인: Supabase GoTrue 소셜 로그인 세션 + 내 프로필(닉네임)
+const auth = createAuthClient();
+const authState = { session: null, profile: null };
+const SESSION_ERROR = '로그인 정보가 만료됐어요. 다시 로그인해 주세요.';
+
+const isSignedIn = () => Boolean(authState.session?.user?.id);
+
+function myName() {
+  if (authState.profile?.nickname) return authState.profile.nickname;
+  return authState.session ? nicknameFromUser(authState.session.user) : '';
+}
+
+/** 세션 만료 직전이면 refresh까지 해서 유효한 세션을 돌려준다 */
+async function currentSession() {
+  const session = await auth.ensureSession();
+  authState.session = session;
+  if (!session) authState.profile = null;
+  return session;
+}
+
+/** 댓글 요청 오류: 토큰 만료는 재로그인으로 안내하고, 나머지는 서버 문구를 쓴다 */
+function commentErrorMessage(err) {
+  if (err instanceof BoardError && err.kind === 'auth') return SESSION_ERROR;
+  return friendlyMessage(err);
+}
 
 // 상세 화면을 떠나면 늦게 도착한 댓글 응답을 버리기 위한 번호
 let commentsToken = 0;
@@ -100,6 +137,188 @@ const LOGO = `<svg class="mark" viewBox="0 0 40 40" aria-hidden="true">
   <rect x="13" y="17" width="14" height="3" fill="#FBFAF5"/>
   <path d="M13 27.2h14" stroke="#FFFFFF" stroke-opacity=".7"/>
 </svg>`;
+
+/* ── 로그인·프로필 시트 ────────────────────── */
+const PROVIDER_MARKS = {
+  kakao: `<svg class="pmark" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4.3c-4.5 0-8.1 2.8-8.1 6.2 0 2.2 1.5 4.2 3.7 5.3l-.9 3.1c-.1.4.3.7.6.5l3.6-2.3c.4.1.7.1 1.1.1 4.5 0 8.1-2.8 8.1-6.2S16.5 4.3 12 4.3z" fill="#241A10"/></svg>`,
+  google: `<span class="pmark g" aria-hidden="true">G</span>`,
+  apple: `<svg class="pmark" viewBox="0 0 24 24" aria-hidden="true"><path d="M16.6 12.6c0-2.3 1.9-3.4 2-3.5-1.1-1.6-2.8-1.8-3.4-1.9-1.5-.1-2.9.9-3.6.9s-1.9-.9-3.1-.8c-1.6 0-3 .9-3.8 2.3-1.6 2.8-.4 7 1.2 9.3.8 1.1 1.7 2.4 2.9 2.3 1.2 0 1.6-.7 3-.7s1.8.7 3.1.7c1.3 0 2.1-1.1 2.8-2.3.9-1.3 1.3-2.6 1.3-2.6-.1 0-2.4-1-2.4-3.7z" fill="#FFF"/><path d="M14.2 5.2c.7-.8 1.1-1.9 1-3-1 0-2.2.7-2.9 1.5-.6.7-1.2 1.8-1 2.9 1.1.1 2.2-.6 2.9-1.4z" fill="#FFF"/></svg>`,
+};
+
+let activeSheet = null;
+
+function closeSheet() {
+  if (!activeSheet) return;
+  const { el, onKey, restoreFocus } = activeSheet;
+  document.removeEventListener('keydown', onKey);
+  el.remove();
+  activeSheet = null;
+  if (restoreFocus && document.contains(restoreFocus)) restoreFocus.focus({ preventScroll: true });
+}
+
+/** 화면 아래에서 올라오는 시트. 바깥을 누르거나 Escape로 닫힌다. */
+function openSheet(fill) {
+  closeSheet();
+  // 시트 밑에서 토스트가 겹쳐 보이지 않게 지운다
+  toastEl.hidden = true;
+  clearTimeout(showToast._t);
+  const backdrop = document.createElement('div');
+  backdrop.className = 'sheet-backdrop';
+  const sheet = document.createElement('section');
+  sheet.className = 'sheet';
+  sheet.setAttribute('role', 'dialog');
+  sheet.setAttribute('aria-modal', 'true');
+  backdrop.appendChild(sheet);
+  document.body.appendChild(backdrop);
+  requestAnimationFrame(() => backdrop.classList.add('open'));
+
+  const focusables = () =>
+    [...sheet.querySelectorAll('button, input, a[href]')].filter((n) => !n.disabled && n.offsetParent !== null);
+
+  const onKey = (event) => {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      closeSheet();
+      return;
+    }
+    if (event.key !== 'Tab') return;
+    const nodes = focusables();
+    if (!nodes.length) return;
+    const first = nodes[0];
+    const last = nodes[nodes.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  };
+  document.addEventListener('keydown', onKey);
+  backdrop.addEventListener('mousedown', (event) => {
+    if (event.target === backdrop) closeSheet();
+  });
+
+  activeSheet = { el: backdrop, onKey, restoreFocus: document.activeElement };
+  fill(sheet);
+  requestAnimationFrame(() => {
+    if (activeSheet?.el === backdrop) sheet.querySelector('button, input')?.focus({ preventScroll: true });
+  });
+  return sheet;
+}
+
+/** 카카오·구글·애플 3종 로그인 시트 */
+function openLoginSheet(message = '') {
+  return openSheet((sheet) => {
+    sheet.innerHTML = `
+      <div class="sheet-grab" aria-hidden="true"></div>
+      <h2 class="sheet-title" id="sheet-title">로그인</h2>
+      <p class="sheet-note">기명 댓글과 내 댓글 관리를 위해 로그인해요. 영양정보 조회·저장·비교는 로그인 없이 이용할 수 있어요.</p>
+      ${message ? `<p class="sheet-alert" role="alert">${esc(message)}</p>` : ''}
+      <div class="provider-list" aria-labelledby="sheet-title">
+        ${PROVIDERS.map(
+          (p) =>
+            `<button type="button" class="provider ${p.key}" data-provider="${p.key}">
+              ${PROVIDER_MARKS[p.key]}<span>${p.name}로 계속하기</span></button>`,
+        ).join('')}
+      </div>
+      <p class="sheet-fine">처음이면 자동으로 가입돼요. 댓글에는 내 닉네임이 함께 남습니다.</p>
+      <button type="button" class="sheet-cancel">닫기</button>
+    `;
+    sheet.querySelectorAll('[data-provider]').forEach((btn) => {
+      btn.addEventListener('click', () => startLogin(btn.dataset.provider));
+    });
+    sheet.querySelector('.sheet-cancel').addEventListener('click', closeSheet);
+  });
+}
+
+async function startLogin(provider) {
+  try {
+    // 성공하면 Supabase 로그인 화면으로 이동한다(돌아오면 bootstrap이 이어받는다)
+    await auth.signIn(provider);
+  } catch (err) {
+    closeSheet();
+    showToast(friendlyAuthMessage(err));
+  }
+}
+
+/** 닉네임 변경·로그아웃 시트 */
+function openProfileSheet() {
+  return openSheet((sheet) => {
+    sheet.innerHTML = `
+      <div class="sheet-grab" aria-hidden="true"></div>
+      <h2 class="sheet-title" id="sheet-title">내 프로필</h2>
+      <p class="sheet-note">댓글에 남는 내 이름이에요. 1~20자까지 바꿀 수 있어요.</p>
+      <form class="nick-form" id="nick-form" novalidate>
+        <label class="sr-only" for="nick-input">닉네임</label>
+        <input id="nick-input" type="text" maxlength="${NICKNAME_MAX}" value="${esc(myName())}" autocomplete="nickname" />
+        <p class="field-error" id="nick-error" role="alert" hidden></p>
+        <button class="btn" type="submit" id="nick-save">닉네임 저장</button>
+      </form>
+      <button type="button" class="sheet-signout" id="signout">로그아웃</button>
+    `;
+    const form = sheet.querySelector('#nick-form');
+    const input = sheet.querySelector('#nick-input');
+    const error = sheet.querySelector('#nick-error');
+    const saveBtn = sheet.querySelector('#nick-save');
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const nickname = sanitizeNickname(input.value);
+      if (!isValidNickname(nickname)) {
+        error.hidden = false;
+        error.textContent = '닉네임은 1~20자로 적어 주세요.';
+        input.classList.add('invalid');
+        input.focus();
+        return;
+      }
+      saveBtn.disabled = true;
+      saveBtn.textContent = '저장 중...';
+      try {
+        const session = await currentSession();
+        if (!session) throw new Error('session');
+        const row = await auth.updateNickname(session, nickname);
+        authState.profile = { ...(authState.profile ?? {}), ...(row ?? {}), nickname };
+        rememberNickname(nickname);
+        closeSheet();
+        showToast('닉네임을 바꿨어요.');
+        route();
+      } catch (err) {
+        error.hidden = false;
+        error.textContent = err?.message === 'session' ? SESSION_ERROR : friendlyAuthMessage(err);
+        saveBtn.disabled = false;
+        saveBtn.textContent = '닉네임 저장';
+      }
+    });
+
+    sheet.querySelector('#signout').addEventListener('click', async () => {
+      const btn = sheet.querySelector('#signout');
+      btn.disabled = true;
+      btn.textContent = '로그아웃 중...';
+      await auth.signOut();
+      authState.session = null;
+      authState.profile = null;
+      closeSheet();
+      showToast('로그아웃했어요.');
+      route();
+    });
+  });
+}
+
+/** 상단 바 오른쪽: 로그인 버튼 / 내 닉네임 칩 */
+function authChipHtml() {
+  if (isSignedIn()) {
+    return `<button type="button" class="auth-chip on" id="auth-btn" aria-haspopup="dialog" aria-label="내 프로필 열기"><span>${esc(myName())}</span></button>`;
+  }
+  return `<button type="button" class="auth-chip" id="auth-btn" aria-haspopup="dialog">로그인</button>`;
+}
+
+function bindAuthChip() {
+  app.querySelector('#auth-btn')?.addEventListener('click', () => {
+    if (isSignedIn()) openProfileSheet();
+    else openLoginSheet();
+  });
+}
 
 function thumbStyle(model) {
   let acc = 0;
@@ -179,6 +398,7 @@ function renderHome() {
     <header class="topbar">
       <div class="brand">${LOGO}<div class="brand-text"><h1>${APP.name}</h1><p>${APP.tagline}</p></div></div>
       <a class="board-link" href="#/board" aria-label="제안·제보 게시판">${BOARD_ICON}<span>제안·제보</span></a>
+      ${authChipHtml()}
     </header>
     <div class="search-wrap">
       <label class="search">
@@ -234,6 +454,7 @@ function renderHome() {
     location.hash = '#/custom';
   });
 
+  bindAuthChip();
   renderHomeFeed();
 }
 
@@ -269,6 +490,7 @@ function renderDetail(product) {
     <header class="topbar">
       <button class="back-btn" id="back" aria-label="뒤로">‹</button>
       <span class="title">${esc(model.name)}</span>
+      ${authChipHtml()}
     </header>
     <div class="card-wrap" id="card-wrap">${svg}</div>
     <div class="actions">
@@ -307,18 +529,24 @@ function renderDetail(product) {
         <h3>💬 아이템별 댓글</h3>
         <span class="comments-total" id="comments-total"></span>
       </div>
-      <p class="comments-note">로그인 없이 익명으로 남길 수 있어요. 이 간식에 대한 한마디를 들려주세요.</p>
+      ${
+        isSignedIn()
+          ? `<p class="comments-note comment-me">댓글은 <b>${esc(myName())}</b> 이름으로 남아요. <button type="button" class="link-btn" id="nick-edit">닉네임 변경</button></p>
       <form class="comment-form" id="comment-form" novalidate>
-        <label class="sr-only" for="cm-nick">닉네임 (선택)</label>
-        <input id="cm-nick" class="comment-nick" type="text" maxlength="20" placeholder="닉네임 (선택 · 비우면 익명)" autocomplete="nickname" />
         <label class="sr-only" for="cm-body">댓글 내용</label>
-        <textarea id="cm-body" maxlength="300" rows="2" placeholder="이 간식, 어떠셨나요?"></textarea>
+        <textarea id="cm-body" maxlength="${COMMENT_LIMITS.bodyMax}" rows="2" placeholder="이 간식, 어떠셨나요?"></textarea>
         <p class="field-error" id="cm-error" role="alert" hidden></p>
         <div class="comment-foot">
           <span class="counter" id="cm-counter">0/${COMMENT_LIMITS.bodyMax}</span>
           <button class="comment-submit" type="submit" id="cm-submit">댓글 남기기</button>
         </div>
-      </form>
+      </form>`
+          : `<p class="comments-note">댓글은 누구나 읽을 수 있어요. 기명으로 남기려면 로그인해 주세요.</p>
+      <div class="comment-gate">
+        <p>기명으로 댓글을 남기려면 로그인이 필요해요.<br /><span>카카오·구글·애플 계정으로 바로 시작할 수 있어요.</span></p>
+        <button type="button" class="comment-submit gate" id="comment-login">카카오·구글·애플로 로그인</button>
+      </div>`
+      }
       <ul class="comment-list" id="comment-list"></ul>
     </section>`
         : ''
@@ -340,6 +568,7 @@ function renderDetail(product) {
   app.querySelector('#share').addEventListener('click', () => exportCard(svgEl, model, 'share'));
 
   if (isCatalog) setupComments(product.id);
+  bindAuthChip();
 }
 
 /* ── 성분표 사진 자동 인식 (전부 기기 안에서) ────────────
@@ -769,7 +998,9 @@ function clearDuplicatePost(kind) {
 }
 
 /* ── 제품별 댓글 ─────────────────────────────── */
-function commentItem(row, highlight = false) {
+const isMyComment = (row) => Boolean(row?.user_id && row.user_id === authState.session?.user?.id);
+
+function commentItem(row, { highlight = false, mine = false } = {}) {
   const li = document.createElement('li');
   li.className = `comment${highlight ? ' new' : ''}`;
   if (row.id) li.dataset.id = String(row.id);
@@ -786,6 +1017,16 @@ function commentItem(row, highlight = false) {
   time.textContent = relativeTime(row.created_at);
   top.append(nick, time);
 
+  if (mine) {
+    const del = document.createElement('button');
+    del.type = 'button';
+    del.className = 'comment-del';
+    del.dataset.deleteId = String(row.id);
+    del.textContent = '삭제';
+    del.setAttribute('aria-label', `${row.nickname || '내'} 댓글 삭제`);
+    top.appendChild(del);
+  }
+
   const body = document.createElement('p');
   body.className = 'comment-body';
   body.textContent = row.body || '';
@@ -797,20 +1038,22 @@ function commentItem(row, highlight = false) {
 function setupComments(productId) {
   const form = app.querySelector('#comment-form');
   const bodyInput = app.querySelector('#cm-body');
-  const nickInput = app.querySelector('#cm-nick');
   const errEl = app.querySelector('#cm-error');
   const listEl = app.querySelector('#comment-list');
   const counter = app.querySelector('#cm-counter');
   const submitBtn = app.querySelector('#cm-submit');
   const totalEl = app.querySelector('#comments-total');
-  if (!form || !listEl) return;
+  if (!listEl) return;
 
   const token = ++commentsToken;
   const alive = () => token === commentsToken;
   let items = [];
   let busy = false;
+  let deleting = false;
 
-  if (!nickInput.value) nickInput.value = readNickname();
+  // 비로그인 안내의 로그인 버튼 / 로그인한 사람의 '닉네임 변경' 링크
+  app.querySelector('#comment-login')?.addEventListener('click', () => openLoginSheet());
+  app.querySelector('#nick-edit')?.addEventListener('click', () => openProfileSheet());
 
   const setEmpty = (text, { retry = false } = {}) => {
     listEl.innerHTML = '';
@@ -838,7 +1081,9 @@ function setupComments(productId) {
       setEmpty('아직 댓글이 없어요. 첫 번째 한마디를 남겨 보세요.');
       return;
     }
-    for (const row of items) listEl.appendChild(commentItem(row, row.id === highlightId));
+    for (const row of items) {
+      listEl.appendChild(commentItem(row, { highlight: String(row.id) === String(highlightId), mine: isMyComment(row) }));
+    }
   };
 
   async function load() {
@@ -860,68 +1105,116 @@ function setupComments(productId) {
     }
   }
 
-  bodyInput.addEventListener('input', () => {
-    counter.textContent = `${countChars(bodyInput.value)}/${COMMENT_LIMITS.bodyMax}`;
-    bodyInput.classList.remove('invalid');
-    bodyInput.removeAttribute('aria-invalid');
-    errEl.hidden = true;
-  });
-  nickInput.addEventListener('input', () => {
-    nickInput.classList.remove('invalid');
-    nickInput.removeAttribute('aria-invalid');
-    errEl.hidden = true;
-  });
-
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    if (busy) return;
-    const check = validateComment({ productId, nickname: nickInput.value, body: bodyInput.value });
-    if (!check.ok) {
-      errEl.hidden = false;
-      errEl.textContent = check.errors.body || check.errors.nickname || '내용을 확인해 주세요.';
-      const bad = check.errors.body ? bodyInput : nickInput;
-      bad.classList.add('invalid');
-      bad.setAttribute('aria-invalid', 'true');
-      bad.focus();
-      return;
-    }
-
-    busy = true;
-    submitBtn.disabled = true;
-    submitBtn.textContent = '남기는 중...';
-    errEl.hidden = true;
-    if (isDuplicatePost('comment', `${check.value.productId}|${check.value.body}`)) {
-      busy = false;
-      submitBtn.disabled = false;
-      submitBtn.textContent = '댓글 남기기';
-      errEl.hidden = false;
-      errEl.textContent = '방금 같은 댓글을 남겼어요. 잠시 뒤 다시 시도해 주세요.';
-      return;
-    }
+  // 내 댓글 [삭제] — RLS가 본인 댓글만 지우게 하고, 지워졌는지까지 확인한다
+  listEl.addEventListener('click', async (event) => {
+    const btn = event.target.closest?.('[data-delete-id]');
+    if (!btn || !alive() || deleting) return;
+    const id = btn.dataset.deleteId;
+    deleting = true;
+    btn.disabled = true;
     try {
-      const row = await boardApi.createComment(check.value);
+      const session = await currentSession();
+      if (!session?.accessToken) {
+        openLoginSheet(SESSION_ERROR);
+        return;
+      }
+      const removed = await boardApi.deleteComment(id, { accessToken: session.accessToken });
       if (!alive()) return;
-      items = sortOldestFirst([...items, row]);
-      renderList(row.id);
-      rememberNickname(check.value.nickname);
-      bodyInput.value = '';
-      counter.textContent = `0/${COMMENT_LIMITS.bodyMax}`;
-      const created = listEl.querySelector(`[data-id="${row.id}"]`);
-      created?.scrollIntoView({ block: 'center', behavior: 'smooth' });
-      showToast('댓글을 남겼어요.');
+      if (!removed) {
+        showToast('이미 지워졌거나 내 댓글이 아니에요.');
+        await load();
+        return;
+      }
+      items = items.filter((row) => String(row.id) !== String(id));
+      renderList();
+      showToast('댓글을 지웠어요.');
     } catch (err) {
       if (!alive()) return;
-      clearDuplicatePost('comment');
-      errEl.hidden = false;
-      errEl.textContent = friendlyMessage(err);
-    } finally {
-      busy = false;
-      if (alive()) {
-        submitBtn.disabled = false;
-        submitBtn.textContent = '댓글 남기기';
+      if (err instanceof BoardError && err.kind === 'auth') {
+        openLoginSheet(SESSION_ERROR);
+        return;
       }
+      if (errEl) {
+        errEl.hidden = false;
+        errEl.textContent = commentErrorMessage(err);
+      }
+    } finally {
+      deleting = false;
+      if (btn.isConnected) btn.disabled = false;
     }
   });
+
+  // 입력 폼은 로그인했을 때만 있다. 비로그인이면 목록만 읽는다.
+  if (form && bodyInput && counter && submitBtn && errEl) {
+    bodyInput.addEventListener('input', () => {
+      counter.textContent = `${countChars(bodyInput.value)}/${COMMENT_LIMITS.bodyMax}`;
+      bodyInput.classList.remove('invalid');
+      bodyInput.removeAttribute('aria-invalid');
+      errEl.hidden = true;
+    });
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (busy) return;
+      const check = validateComment({ productId, nickname: myName(), body: bodyInput.value });
+      if (!check.ok) {
+        errEl.hidden = false;
+        errEl.textContent = check.errors.body || check.errors.nickname || '내용을 확인해 주세요.';
+        bodyInput.classList.add('invalid');
+        bodyInput.setAttribute('aria-invalid', 'true');
+        bodyInput.focus();
+        return;
+      }
+
+      busy = true;
+      submitBtn.disabled = true;
+      submitBtn.textContent = '남기는 중...';
+      errEl.hidden = true;
+      if (isDuplicatePost('comment', `${check.value.productId}|${check.value.body}`)) {
+        busy = false;
+        submitBtn.disabled = false;
+        submitBtn.textContent = '댓글 남기기';
+        errEl.hidden = false;
+        errEl.textContent = '방금 같은 댓글을 남겼어요. 잠시 뒤 다시 시도해 주세요.';
+        return;
+      }
+      try {
+        const session = await currentSession();
+        if (!session?.user?.id) {
+          openLoginSheet(SESSION_ERROR);
+          return;
+        }
+        const row = await boardApi.createComment(
+          { ...check.value, nickname: myName(), userId: session.user.id },
+          { accessToken: session.accessToken },
+        );
+        if (!alive()) return;
+        items = sortOldestFirst([...items, row]);
+        renderList(row.id);
+        rememberNickname(myName());
+        bodyInput.value = '';
+        counter.textContent = `0/${COMMENT_LIMITS.bodyMax}`;
+        const created = listEl.querySelector(`[data-id="${row.id}"]`);
+        created?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        showToast('댓글을 남겼어요.');
+      } catch (err) {
+        if (!alive()) return;
+        clearDuplicatePost('comment');
+        if (err instanceof BoardError && err.kind === 'auth') {
+          openLoginSheet(SESSION_ERROR);
+          return;
+        }
+        errEl.hidden = false;
+        errEl.textContent = commentErrorMessage(err);
+      } finally {
+        busy = false;
+        if (alive() && submitBtn.isConnected) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = '댓글 남기기';
+        }
+      }
+    });
+  }
 
   load();
 }
@@ -1167,7 +1460,7 @@ function renderBoard() {
   if (isBoardCategory(board.draft.category)) catSel.value = board.draft.category;
   titleEl.value = board.draft.title;
   bodyEl.value = board.draft.body;
-  nickEl.value = board.draft.nickname || readNickname();
+  nickEl.value = board.draft.nickname || readNickname() || myName();
   titleCounter.textContent = `${countChars(titleEl.value)}/${FEEDBACK_LIMITS.titleMax}`;
   bodyCounter.textContent = `${countChars(bodyEl.value)}/${FEEDBACK_LIMITS.bodyMax}`;
 
@@ -1440,4 +1733,43 @@ window.addEventListener('hashchange', () => {
   navCount += 1;
   route();
 });
-route();
+
+/** 앱 시작: 소셜 로그인 콜백(있다면) 처리 → 세션·프로필 준비 → 첫 화면 */
+async function bootstrap() {
+  const callback = await auth.handleCallback();
+
+  if (callback.status !== 'none') {
+    // ?code=... 를 주소창에서 지우고, 로그인 전에 보던 화면으로 돌아간다
+    const returnTo = auth.consumeReturnPath() || callback.returnTo || '';
+    const clean = cleanCallbackUrl(location.href);
+    try {
+      history.replaceState(null, '', `${clean}${returnTo.startsWith('#') ? returnTo : ''}`);
+    } catch {
+      /* 주소 정리가 막힌 환경이면 해시만 그대로 둔다 */
+    }
+  }
+
+  authState.session = callback.session ?? (await auth.ensureSession());
+  if (authState.session) {
+    try {
+      authState.profile = await ensureProfile(auth, authState.session);
+    } catch (err) {
+      console.warn('[auth] 내 프로필을 불러오지 못했어요', err);
+      authState.profile = null;
+    }
+  }
+
+  route();
+
+  if (callback.status === 'ok') {
+    const name = myName();
+    showToast(name ? `${name}님, 로그인됐어요.` : '로그인됐어요.');
+    if (location.hash.startsWith('#/p/')) {
+      app.querySelector('#comments')?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    }
+  } else if (callback.status === 'error') {
+    openLoginSheet(callback.message);
+  }
+}
+
+bootstrap();
