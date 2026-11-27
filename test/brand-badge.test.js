@@ -7,6 +7,7 @@ import {
   brandBadge,
   brandStyle,
   brandSymbol,
+  brandSymbolShapes,
 } from '../lib/brand-badge.js';
 import { PRODUCTS } from '../data/products.js';
 
@@ -93,6 +94,17 @@ test('딱지는 심볼 + 제조사 이름을 담는다', () => {
   assert.ok(html.includes('class="bsym"'));
   assert.ok(html.includes('<span class="bname">농심</span>'));
   assert.match(brandBadge('오리온', { extraClass: 'sm' }), /class="brand-badge sm"/);
+});
+
+test('심볼 도형은 다른 SVG 안에 넣을 수 있게 내보낸다', () => {
+  const shapes = brandSymbolShapes('농심');
+  assert.ok(shapes.includes(BRAND_COLORS['농심']), '브랜드 색');
+  assert.ok(!shapes.includes('<svg'), '바깥 <svg> 없이 도형만');
+  assert.equal(brandSymbolShapes(''), '');
+  assert.equal(brandSymbolShapes('   '), '');
+  // brandSymbol은 같은 도형을 <svg>로 감싼 것
+  assert.ok(brandSymbol('농심').includes(shapes));
+  assert.ok(!brandSymbolShapes('<img src=x onerror="alert(1)">').includes('<img'));
 });
 
 test('제조사 이름은 XSS 안전하게 이스케이프된다', () => {
