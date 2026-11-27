@@ -192,3 +192,144 @@ test('friendlyMessage는 BoardError의 안내를 그대로 쓴다', () => {
   assert.match(friendlyMessage(new BoardError('network', '인터넷 연결을 확인해 주세요.')), /인터넷/);
   assert.match(friendlyMessage(new Error('boom')), /문제/);
 });
+
+/* ── 아이템(상품) · 어드민 ─────────────────── */
+
+const TOKEN = 'user-access-token';
+
+test('아이템 목록: 번호 오름차순, 노출 중인 것만 기본으로', async () => {
+  const { api, calls } = apiWith(() => jsonResponse([{ item_no: 1, id: 'a' }]));
+  const rows = await api.fetchProducts();
+  assert.equal(rows.length, 1);
+  const { url, init } = calls[0];
+  assert.ok(url.startsWith(`${URL_BASE}/rest/v1/tumyeongbongji_products?`));
+  const query = new URL(url).searchParams;
+  assert.equal(query.get('order'), 'item_no.asc');
+  assert.equal(query.get('is_active'), 'eq.true');
+  assert.ok(query.get('select').includes('alt_links'));
+  assert.equal(init.method, 'GET');
+});
+
+test('아이템 목록: 관리자는 숨김까지 모두 받는다', async () => {
+  const { api, calls } = apiWith(() => jsonResponse([]));
+  await api.fetchProducts({ includeInactive: true, accessToken: TOKEN });
+  const query = new URL(calls[0].url).searchParams;
+  assert.equal(query.get('is_active'), null);
+  assert.equal(calls[0].init.headers.Authorization, `Bearer ${TOKEN}`);
+});
+
+test('아이템 추가: 로그인 토큰과 함께 POST, 저장된 행을 돌려준다', async () => {
+  const { api, calls } = apiWith(() =>
+    jsonResponse([{ item_no: 35, id: 'new-snack', name: '새 과자', alt_links: [] }], 201),
+  );
+  const saved = await api.createProduct(
+    { id: 'new-snack', name: '새 과자', alt_links: [{ title: '쿠팡', url: 'https://a.com' }] },
+    { accessToken: TOKEN },
+  );
+  assert.equal(saved.item_no, 35);
+  const { url, init } = calls[0];
+  assert.equal(url, `${URL_BASE}/rest/v1/tumyeongbongji_products`);
+  assert.equal(init.method, 'POST');
+  assert.equal(init.headers.Authorization, `Bearer ${TOKEN}`);
+  assert.equal(JSON.parse(init.body).alt_links.length, 1);
+});
+
+test('아이템 추가·수정·삭제: 토큰이 없으면 요청하지 않고 관리자 로그인 오류', async () => {
+  const { api, calls } = apiWith(() => jsonResponse([], 201));
+  for (const run of [
+    () => api.createProduct({ id: 'x', name: 'y' }),
+    () => api.updateProduct(1, { name: 'y' }),
+    () => api.deleteProduct(1),
+    () => api.fetchAllCommentsForAdmin(),
+    () => api.updateFeedbackStatus('id', 'done'),
+  ]) {
+    await assert.rejects(
+      run,
+      (err) => err instanceof BoardError && err.kind === 'login' && /관리자/.test(err.message),
+    );
+  }
+  assert.equal(calls.length, 0);
+});
+
+test('아이템 수정: item_no 조건으로 PATCH하고 바뀐 행을 돌려준다', async () => {
+  const { api, calls } = apiWith(() => jsonResponse([{ item_no: 3, id: 'choco-heim', name: '쵸코하임' }]));
+  const saved = await api.updateProduct(3, { name: '쵸코하임', item_no: 9 }, { accessToken: TOKEN });
+  assert.equal(saved.item_no, 3);
+  const { url, init } = calls[0];
+  assert.ok(url.startsWith(`${URL_BASE}/rest/v1/tumyeongbongji_products?item_no=eq.3`));
+  assert.equal(init.method, 'PATCH');
+  assert.equal(JSON.parse(init.body).item_no, 9);
+});
+
+test('아이템 수정: 권한이 없어 아무 행도 안 바뀌면 auth 오류', async () => {
+  const { api } = apiWith(() => jsonResponse([]));
+  await assert.rejects(
+    () => api.updateProduct(3, { name: 'x' }, { accessToken: TOKEN }),
+    (err) => err instanceof BoardError && err.kind === 'auth',
+  );
+});
+
+test('아이템 삭제: 지워졌는지 true/false로 알려 준다', async () => {
+  const gone = apiWith(() => jsonResponse([{ item_no: 3, id: 'x' }]));
+  assert.equal(await gone.api.deleteProduct(3, { accessToken: TOKEN }), true);
+  assert.equal(gone.calls[0].init.method, 'DELETE');
+  assert.ok(gone.calls[0].url.includes('item_no=eq.3'));
+
+  const none = apiWith(() => jsonResponse([]));
+  assert.equal(await none.api.deleteProduct(3, { accessToken: TOKEN }), false);
+});
+
+test('관리자 판별: rpc/tb_is_admin에 토큰을 실어 묻는다', async () => {
+  const { api, calls } = apiWith(() => jsonResponse(true));
+  assert.equal(await api.checkIsAdmin({ accessToken: TOKEN }), true);
+  assert.equal(calls[0].url, `${URL_BASE}/rest/v1/rpc/tb_is_admin`);
+  assert.equal(calls[0].init.method, 'POST');
+  assert.equal(calls[0].init.headers.Authorization, `Bearer ${TOKEN}`);
+  assert.deepEqual(JSON.parse(calls[0].init.body), {});
+
+  const noToken = apiWith(() => jsonResponse(true));
+  assert.equal(await noToken.api.checkIsAdmin(), false);
+  assert.equal(noToken.calls.length, 0);
+});
+
+test('어드민 댓글 목록: 최신순으로 전체를 받는다', async () => {
+  const { api, calls } = apiWith(() => jsonResponse([{ id: 'c1', product_id: 'x', body: '굿' }]));
+  const rows = await api.fetchAllCommentsForAdmin({ accessToken: TOKEN, limit: 30 });
+  assert.equal(rows.length, 1);
+  const query = new URL(calls[0].url).searchParams;
+  assert.equal(query.get('order'), 'created_at.desc');
+  assert.equal(query.get('limit'), '30');
+  assert.equal(query.get('select'), 'id,product_id,nickname,body,user_id,created_at');
+});
+
+test('관리자 댓글 삭제: id 조건으로 DELETE', async () => {
+  const { api, calls } = apiWith(() => jsonResponse([{ id: 'c1' }]));
+  assert.equal(await api.deleteCommentByAdmin('c1', { accessToken: TOKEN }), true);
+  assert.ok(calls[0].url.includes('tumyeongbongji_comments?id=eq.c1'));
+  assert.equal(calls[0].init.method, 'DELETE');
+});
+
+test('어드민 제보 목록과 상태 변경: PATCH status', async () => {
+  const list = apiWith(() => jsonResponse([{ id: 'f1', status: 'open' }]));
+  await list.api.fetchAllFeedbackForAdmin({ accessToken: TOKEN });
+  assert.equal(new URL(list.calls[0].url).searchParams.get('order'), 'created_at.desc');
+
+  const patch = apiWith(() => jsonResponse([{ id: 'f1', status: 'done' }]));
+  const saved = await patch.api.updateFeedbackStatus('f1', 'done', { accessToken: TOKEN });
+  assert.equal(saved.status, 'done');
+  assert.equal(patch.calls[0].init.method, 'PATCH');
+  assert.deepEqual(JSON.parse(patch.calls[0].init.body), { status: 'done' });
+
+  const bad = apiWith(() => jsonResponse([]));
+  await assert.rejects(
+    () => bad.api.updateFeedbackStatus('f1', 'archived', { accessToken: TOKEN }),
+    (err) => err instanceof BoardError && err.kind === 'validation',
+  );
+  assert.equal(bad.calls.length, 0);
+});
+
+test('관리자 제보 삭제: 지워졌는지 true/false', async () => {
+  const { api, calls } = apiWith(() => jsonResponse([{ id: 'f1' }]));
+  assert.equal(await api.deleteFeedbackByAdmin('f1', { accessToken: TOKEN }), true);
+  assert.ok(calls[0].url.includes('tumyeongbongji_feedback?id=eq.f1'));
+});
