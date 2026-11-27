@@ -2506,7 +2506,7 @@ async function svgToBlob(svgEl, targetWidth = 1080) {
   clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
   clone.setAttribute('width', canvas.width);
   clone.setAttribute('height', canvas.height);
-  // 카드 PNG에는 Jua 글꼴을 SVG 안에 심어서 내보낸다(문서 폰트는 <img>에 전달되지 않는다)
+  // 카드 PNG에는 Gowun Dodum 글꼴을 SVG 안에 심어서 내보낸다(문서 폰트는 <img>에 전달되지 않는다)
   const serialized = new XMLSerializer().serializeToString(clone);
   const xml = await embedCardFont(serialized);
   const url = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(xml)}`;

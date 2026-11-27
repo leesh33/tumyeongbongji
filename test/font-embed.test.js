@@ -30,14 +30,14 @@ test('XML 엔티티를 원래 글자로 되돌린다', () => {
 
 test('Google Fonts 서브셋 주소에 글자와 display=swap을 넣는다', () => {
   const url = buildSubsetFontCssUrl('가나·다');
-  assert.ok(url.startsWith('https://fonts.googleapis.com/css2?family=Jua'));
+  assert.ok(url.startsWith(`https://fonts.googleapis.com/css2?family=${encodeURIComponent('Gowun Dodum')}`));
   assert.ok(url.includes('display=swap'));
   assert.ok(url.includes(`text=${encodeURIComponent('가나·다')}`));
 });
 
 test('CSS에서 woff2 주소를 뽑는다', () => {
-  const css = `@font-face{font-family:'Jua';src:url(https://fonts.gstatic.com/s/jua/v1/x.woff2) format('woff2');}`;
-  assert.equal(extractFontUrl(css), 'https://fonts.gstatic.com/s/jua/v1/x.woff2');
+  const css = `@font-face{font-family:'Gowun Dodum';src:url(https://fonts.gstatic.com/s/gowundodum/v12/x.woff2) format('woff2');}`;
+  assert.equal(extractFontUrl(css), 'https://fonts.gstatic.com/s/gowundodum/v12/x.woff2');
   const woff = `src:url('https://a.com/y.woff') format('woff')`;
   assert.equal(extractFontUrl(woff), 'https://a.com/y.woff');
   assert.equal(extractFontUrl('nothing'), '');
@@ -45,15 +45,15 @@ test('CSS에서 woff2 주소를 뽑는다', () => {
 
 test('@font-face 문자열은 data:base64를 담는다', () => {
   const css = fontFaceCss('AAAA', { format: 'woff2' });
-  assert.ok(css.includes("font-family:'Jua'"));
+  assert.ok(css.includes("font-family:'Gowun Dodum'"));
   assert.ok(css.includes('data:font/woff2;base64,AAAA'));
   assert.ok(css.includes("format('woff2')"));
 });
 
 test('SVG 여는 태그 뒤에 <style>을 끼워 넣는다', () => {
-  const out = withFontFace(SVG, '@font-face{font-family:Jua}');
+  const out = withFontFace(SVG, '@font-face{font-family:Gowun Dodum}');
   assert.ok(out.indexOf('<defs><style') > out.indexOf('<svg'));
-  assert.ok(out.includes('@font-face{font-family:Jua}'));
+  assert.ok(out.includes('@font-face{font-family:Gowun Dodum}'));
   assert.equal(withFontFace(SVG, ''), SVG);
 });
 

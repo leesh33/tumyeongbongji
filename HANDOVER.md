@@ -97,7 +97,7 @@
   - 홈·검색: 목록에 `#001` 번호 칩, 검색창에서 번호로도 찾기. 상세: 상단에 아이템 번호, `저당·대체 간식` 아래에 대체상품 링크 카드 + "제휴 링크가 포함될 수 있어요" 안내(링크가 없으면 기존 준비 중 문구).
   - `#/admin`: 3탭(아이템·성분 / 댓글 / 제안·제보). 아이템 폼에서 번호·성분·원재료·노출 여부·대체상품 링크(행 추가/삭제, 플랫폼 선택, URL, 메모)를 고치고 저장하면 DB 반영 + 앱 목록 즉시 갱신. 관리자가 아니면 관리자 이메일 안내 + 로그인/홈 버튼.
   - 헤더 기어 버튼·프로필 시트의 `어드민 관리`는 `tb_is_admin()`이 true일 때만 보인다.
-- **폰트**: 배민 주아체(Jua) 적용(`index.html` Google Fonts, `styles.css` body). 카드 SVG도 Jua, PNG 내보내기는 카드 글자만 담은 서브셋 woff2를 data URI `@font-face`로 심어 내보낸다(`lib/font-embed.js`) — SVG를 `<img>`로 그리면 문서 폰트가 전달되지 않기 때문.
+- **폰트**: 고운돋움(Gowun Dodum) 적용(`index.html` Google Fonts, `styles.css` body). 카드 SVG도 Gowun Dodum, PNG 내보내기는 카드 글자만 담은 서브셋 woff2를 data URI `@font-face`로 심어 내보낸다(`lib/font-embed.js`) — SVG를 `<img>`로 그리면 문서 폰트가 전달되지 않기 때문.
 - **테스트**: `node --test` **172/172 통과**(admin 20, catalog 5, font-embed 9, supabase 13 추가).
-- **검증**: `tools/verify_admin.py [base_url] [tag]` — 390×844·데스크톱에서 실제 DB 34종 로드·번호 노출·번호 검색, 비관리자 차단, 관리자(세션 주입+응답 목) 3탭·폼 검증(잘못된 URL 거부·정상 URL 저장)·댓글 삭제·제보 상태 변경·삭제, 상세 링크 카드, Jua 적용·내보내기 서브셋 요청, 가로 넘침·콘솔 오류 0. 스크린샷 `verification/tumyeongbongji/admin-*.png`.
+- **검증**: `tools/verify_admin.py [base_url] [tag]` — 390×844·데스크톱에서 실제 DB 34종 로드·번호 노출·번호 검색, 비관리자 차단, 관리자(세션 주입+응답 목) 3탭·폼 검증(잘못된 URL 거부·정상 URL 저장)·댓글 삭제·제보 상태 변경·삭제, 상세 링크 카드, Gowun Dodum 적용·내보내기 서브셋 요청, 가로 넘침·콘솔 오류 0. 스크린샷 `verification/tumyeongbongji/admin-*.png`.
 - **남은 확인**: 실제 관리자 구글 계정으로 로그인해 라이브에서 저장·삭제를 눌러 보는 실측(현재는 응답 목으로 검증). 로컬 검증 55/55 통과.

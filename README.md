@@ -58,8 +58,8 @@ node --test
 
 ## 폰트
 
-화면 글꼴은 **배민 주아체(Jua)** 입니다(`index.html`의 Google Fonts + `styles.css`의 `body` font-family).
-카드 SVG도 `Jua`를 먼저 쓰고, PNG로 내보낼 때는 카드에 나온 글자만 담은 Google Fonts 서브셋을 받아
+화면 글꼴은 **고운돋움(Gowun Dodum)** 입니다(`index.html`의 Google Fonts + `styles.css`의 `body` font-family).
+카드 SVG도 `Gowun Dodum`을 먼저 쓰고, PNG로 내보낼 때는 카드에 나온 글자만 담은 Google Fonts 서브셋을 받아
 SVG 안에 `@font-face`(base64)로 심습니다(`lib/font-embed.js`). SVG를 `<img>`로 그리면 문서 폰트를 쓰지 못해
 기본 글꼴로 떨어지기 때문입니다.
 
