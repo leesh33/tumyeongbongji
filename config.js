@@ -22,4 +22,5 @@ export const SUPABASE = {
   key: 'sb_publishable_Q0Uf4DKkuZ2GenyB62j59g_udl3BwfI',
   feedbackTable: 'tumyeongbongji_feedback',
   commentsTable: 'tumyeongbongji_comments',
+  productsTable: 'tumyeongbongji_products',
 };

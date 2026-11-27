@@ -33,7 +33,7 @@ body {
     radial-gradient(120% 70% at 50% -10%, #f6efe6 0%, rgba(246, 239, 230, 0) 60%),
     var(--kraft);
   color: var(--ink);
-  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Malgun Gothic',
+  font-family: 'Jua', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Malgun Gothic',
     'Noto Sans KR', sans-serif;
   -webkit-font-smoothing: antialiased;
   font-size: 15px;
@@ -1840,4 +1840,586 @@ a {
 
 .comment-del:disabled {
   opacity: 0.6;
+}
+
+/* ── 아이템 번호 ───────────────────────────── */
+.item-no {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 0 5px;
+  border: 1px solid #e6d9c6;
+  border-radius: 6px;
+  background: #f4ebdd;
+  color: #7a6349;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+  vertical-align: middle;
+}
+
+.item-no.big {
+  flex: 0 0 auto;
+  margin: 0 6px 0 2px;
+  padding: 2px 7px;
+  font-size: 11px;
+}
+
+/* 헤더의 어드민(기어) 버튼 */
+.admin-link {
+  flex: 0 0 auto;
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: var(--paper);
+  color: var(--ink-2);
+  box-shadow: 0 1px 2px rgba(70, 50, 25, 0.04);
+}
+
+.admin-link:active {
+  transform: scale(0.97);
+}
+
+/* 프로필 시트의 어드민 입구 */
+.sheet-admin {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  margin: 12px 0 0;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #faf4ea;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+/* ── 어드민: 관리자 전용 안내 ───────────────── */
+.admin-gate {
+  margin: 18px 14px;
+  padding: 26px 18px 20px;
+  border: 1px solid rgba(227, 214, 196, 0.9);
+  border-radius: 20px;
+  background: var(--paper);
+  text-align: center;
+}
+
+.admin-gate-emoji {
+  font-size: 30px;
+  margin: 0 0 6px;
+}
+
+.admin-gate h2 {
+  margin: 0 0 8px;
+  font-size: 17px;
+}
+
+.admin-gate p {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 13px;
+  line-height: 1.6;
+  word-break: keep-all;
+}
+
+.admin-gate-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+/* ── 어드민 화면 ───────────────────────────── */
+.admin-who {
+  flex: 0 1 auto;
+  max-width: 42%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+  font-size: 10.5px;
+}
+
+.admin-tabs {
+  display: flex;
+  gap: 6px;
+  padding: 10px 14px 2px;
+}
+
+.admin-tab {
+  flex: 1;
+  padding: 9px 4px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #f7eee2;
+  color: var(--ink-2);
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.admin-tab[aria-selected='true'] {
+  background: var(--paper);
+  border-color: #d7c3a6;
+  color: var(--ink);
+  box-shadow: 0 1px 3px rgba(70, 50, 25, 0.08);
+}
+
+.admin-body {
+  padding: 10px 14px 24px;
+}
+
+.admin-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.admin-search {
+  flex: 1;
+  min-width: 0;
+}
+
+.admin-count {
+  margin: 2px 2px 8px;
+  color: var(--muted);
+  font-size: 11.5px;
+}
+
+.admin-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.admin-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 10px;
+  border: 1px solid rgba(227, 214, 196, 0.9);
+  border-radius: 14px;
+  background: var(--paper);
+}
+
+.admin-row.off {
+  opacity: 0.62;
+}
+
+.admin-row .item-no {
+  margin: 0;
+  flex: 0 0 auto;
+}
+
+.admin-row-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.admin-row-main b {
+  display: block;
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-row-main em {
+  display: block;
+  margin-top: 1px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-style: normal;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.admin-hidden-badge {
+  flex: 0 0 auto;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: #efe3d2;
+  color: #8a6b48;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+/* 어드민 폼 */
+.admin-form-card {
+  padding: 14px 12px 4px;
+  border: 1px solid rgba(227, 214, 196, 0.9);
+  border-radius: 18px;
+  background: var(--paper);
+}
+
+.admin-form-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.admin-form-head h2 {
+  margin: 0;
+  font-size: 15px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-form {
+  padding: 0 0 12px;
+}
+
+.admin-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 10px;
+}
+
+.admin-alt-block {
+  margin: 4px 0 12px;
+  padding: 10px;
+  border: 1px dashed #dccdb7;
+  border-radius: 14px;
+  background: #fdf8f0;
+}
+
+.admin-alt-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.admin-alt-head b {
+  font-size: 13px;
+}
+
+.admin-alt-head .hint {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.alt-edit-list {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.alt-edit-row {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 8px;
+  border: 1px solid #e6d9c6;
+  border-radius: 12px;
+  background: var(--paper);
+}
+
+.alt-edit-top,
+.alt-edit-mid {
+  display: flex;
+  gap: 6px;
+}
+
+.alt-edit-top .alt-title {
+  flex: 1;
+  min-width: 0;
+}
+
+.alt-edit-mid .alt-platform {
+  flex: 0 0 96px;
+}
+
+.alt-edit-mid .alt-url {
+  flex: 1;
+  min-width: 0;
+}
+
+.alt-edit-row input,
+.alt-edit-row select {
+  width: 100%;
+  padding: 8px 9px;
+  border: 1px solid #ddd0bd;
+  border-radius: 9px;
+  background: #fffdf9;
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+}
+
+.alt-edit-row input:focus,
+.alt-edit-row select:focus {
+  outline: 2px solid #c8b48f;
+  outline-offset: 1px;
+}
+
+.alt-remove {
+  flex: 0 0 auto;
+  width: 34px;
+  border: 1px solid #e6d9c6;
+  border-radius: 9px;
+  background: #f7eee2;
+  color: #8a6b48;
+  font-size: 12px;
+}
+
+.admin-alt-note {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.admin-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 2px 0 14px;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+.admin-toggle input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--green);
+}
+
+.btn.danger,
+.btn.small.danger {
+  color: var(--accent);
+  border-color: #e8c2b1;
+  background: #fdf1ea;
+}
+
+/* 어드민: 댓글·제보 목록 */
+.admin-comments,
+.admin-feedback {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.admin-comment,
+.admin-fb {
+  padding: 10px 11px;
+  border: 1px solid rgba(227, 214, 196, 0.9);
+  border-radius: 14px;
+  background: var(--paper);
+}
+
+.admin-comment-top,
+.admin-fb-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.admin-comment-top time,
+.admin-fb-top time {
+  margin-left: auto;
+  color: var(--faint);
+  font-size: 10.5px;
+}
+
+.admin-comment-product {
+  max-width: 60%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: #f4ebdd;
+  color: #7a6349;
+  font-size: 10.5px;
+  font-weight: 700;
+}
+
+.admin-comment-body,
+.admin-fb-body {
+  margin: 0 0 6px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--ink);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.admin-fb-title {
+  display: block;
+  font-size: 13.5px;
+  margin-bottom: 2px;
+}
+
+.admin-comment-foot,
+.admin-fb-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.admin-comment-nick {
+  color: var(--ink-2);
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+.admin-fb-actions {
+  display: flex;
+  gap: 6px;
+}
+
+/* 상세 화면: 대체상품 링크 */
+.alt-links {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px dashed #ddcfba;
+}
+
+.alt-links-head {
+  margin: 0 0 8px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--ink-2);
+}
+
+.alt-link-list {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.alt-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 10px;
+  border: 1px solid #e3d6c4;
+  border-radius: 12px;
+  background: var(--paper);
+}
+
+.alt-link:active {
+  transform: scale(0.995);
+}
+
+.alt-pf {
+  flex: 0 0 auto;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 700;
+  background: #f1e6d6;
+  color: #7a5f45;
+}
+
+.alt-pf.coupang {
+  background: #fdeee9;
+  color: #c0512a;
+}
+
+.alt-pf.naver {
+  background: #e9f6ec;
+  color: #2f7a47;
+}
+
+.alt-link-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.alt-link-body b {
+  display: block;
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.alt-link-body em {
+  display: block;
+  margin-top: 1px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-style: normal;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.alt-go {
+  flex: 0 0 auto;
+  color: var(--faint);
+  font-size: 16px;
+}
+
+.alt-links-note {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 10.5px;
+  line-height: 1.5;
+}
+
+@media (min-width: 720px) {
+  .admin-body {
+    max-width: 760px;
+    margin: 0 auto;
+  }
+
+  .admin-grid {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+}
+
+.app.app-wide {
+  max-width: 860px;
+}
+
+/* 어드민의 작은 버튼은 폭을 내용에 맞춘다(.btn 기본은 flex:1 전체 폭) */
+.admin-row .btn.small,
+.admin-comment-foot .btn.small,
+.admin-fb-actions .btn.small,
+.admin-form-head .btn.small,
+.admin-bar .btn.small,
+.admin-alt-block .btn.small,
+.admin-gate .btn {
+  flex: 0 0 auto;
+  width: auto;
+  height: 34px;
+  padding: 0 12px;
+  border-radius: 10px;
+  font-size: 12.5px;
+}
+
+.admin-gate-actions .btn {
+  width: 100%;
+  height: 46px;
+  font-size: 14px;
+}
+
+.admin-form-head .btn.small {
+  height: 32px;
 }

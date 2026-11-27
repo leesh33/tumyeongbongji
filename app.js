@@ -1,5 +1,31 @@
 import { APP } from './config.js';
-import { PRODUCTS, CATEGORIES, productById } from './data/products.js';
+import { CATEGORIES } from './data/products.js';
+import {
+  isCatalogProduct,
+  listProducts,
+  productById,
+  removeProduct,
+  resetProducts,
+  setProducts,
+  upsertProduct,
+} from './lib/catalog.js';
+import {
+  ADMIN_EMAIL,
+  ADMIN_TABS,
+  ALT_PLATFORMS,
+  PLATFORM_LABEL,
+  PRODUCT_LIMITS,
+  PRODUCT_UNITS,
+  formatItemNo,
+  itemNoQuery,
+  matchesProductQuery,
+  nextItemNo,
+  productToRow,
+  rowToProduct,
+  slugify,
+  validateProductInput,
+} from './lib/admin.js';
+import { createFontEmbedder } from './lib/font-embed.js';
 import {
   BOARD_CATEGORIES,
   COMMENT_LIMITS,
@@ -61,7 +87,7 @@ const board = {
 
 // 기명 댓글용 로그인: Supabase GoTrue 소셜 로그인 세션 + 내 프로필(닉네임)
 const auth = createAuthClient();
-const authState = { session: null, profile: null };
+const authState = { session: null, profile: null, isAdmin: false };
 const SESSION_ERROR = '로그인 정보가 만료됐어요. 다시 로그인해 주세요.';
 
 const isSignedIn = () => Boolean(authState.session?.user?.id);
@@ -255,6 +281,11 @@ function openProfileSheet() {
         <p class="field-error" id="nick-error" role="alert" hidden></p>
         <button class="btn" type="submit" id="nick-save">닉네임 저장</button>
       </form>
+      ${
+        isAdminUser()
+          ? `<a class="sheet-admin" href="#/admin" id="admin-enter"><span aria-hidden="true">⚙</span> 어드민 관리</a>`
+          : ''
+      }
       <button type="button" class="sheet-signout" id="signout">로그아웃</button>
     `;
     const form = sheet.querySelector('#nick-form');
@@ -290,6 +321,8 @@ function openProfileSheet() {
         saveBtn.textContent = '닉네임 저장';
       }
     });
+
+    sheet.querySelector('#admin-enter')?.addEventListener('click', () => closeSheet());
 
     sheet.querySelector('#signout').addEventListener('click', async () => {
       const btn = sheet.querySelector('#signout');
@@ -335,12 +368,9 @@ function productThumb(product) {
 }
 
 function filteredProducts() {
-  const q = state.q.trim().toLowerCase();
-  return PRODUCTS.filter((p) => {
+  return listProducts().filter((p) => {
     if (state.category !== 'all' && p.category !== state.category) return false;
-    if (!q) return true;
-    const hay = [p.name, p.brand, ...(p.ingredients ?? [])].join(' ').toLowerCase();
-    return hay.includes(q);
+    return matchesProductQuery(p, state.q);
   });
 }
 
@@ -348,6 +378,11 @@ function filteredProducts() {
 const BOARD_ICON = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
   <path d="M4.2 6.2A2.7 2.7 0 0 1 6.9 3.5h10.2a2.7 2.7 0 0 1 2.7 2.7v7.6a2.7 2.7 0 0 1-2.7 2.7h-6.3l-4.4 3.8v-3.8h-.2a2.7 2.7 0 0 1-2-2.7z" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/>
   <circle cx="8.6" cy="10" r=".95" fill="currentColor"/><circle cx="12" cy="10" r=".95" fill="currentColor"/><circle cx="15.4" cy="10" r=".95" fill="currentColor"/>
+</svg>`;
+
+const GEAR_ICON = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+  <circle cx="12" cy="12" r="3.2" stroke="currentColor" stroke-width="1.9"/>
+  <path d="M12 3.2v2.1M12 18.7v2.1M4.8 12H2.7M21.3 12h-2.1M6.9 6.9 5.4 5.4M18.6 18.6l-1.5-1.5M6.9 17.1l-1.5 1.5M18.6 5.4l-1.5 1.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
 </svg>`;
 
 /** 홈의 검색 결과 부분만 다시 그린다(입력 중 재렌더로 한글 조합이 끊기지 않게). */
@@ -368,7 +403,7 @@ function renderHomeFeed() {
       return `<li><a class="item" href="#/p/${p.id}">
         <span class="thumb" style="${thumbStyle(m)}"></span>
         <span class="info">
-          ${brandBadge(p.brand)}
+          ${brandBadge(p.brand)}${p.itemNo ? `<span class="item-no" title="아이템 번호">${formatItemNo(p.itemNo)}</span>` : ''}
           <b>${esc(p.name)}</b>
           <em>${fmtAmount(p.weight)}${p.unit} · ${p.kcal} kcal</em>
         </span>
@@ -397,6 +432,11 @@ function renderHome() {
   app.innerHTML = `
     <header class="topbar">
       <div class="brand">${LOGO}<div class="brand-text"><h1>${APP.name}</h1><p>${APP.tagline}</p></div></div>
+      ${
+        isAdminUser()
+          ? `<a class="admin-link" href="#/admin" aria-label="어드민 관리" title="어드민 관리">${GEAR_ICON}</a>`
+          : ''
+      }
       <a class="board-link" href="#/board" aria-label="제안·제보 게시판">${BOARD_ICON}<span>제안·제보</span></a>
       ${authChipHtml()}
     </header>
@@ -411,7 +451,7 @@ function renderHome() {
       </label>
     </div>
     <nav class="chips" aria-label="카테고리">
-      <button class="chip" data-cat="all" aria-pressed="${state.category === 'all'}">전체 ${PRODUCTS.length}</button>
+      <button class="chip" data-cat="all" aria-pressed="${state.category === 'all'}">전체 ${listProducts().length}</button>
       ${CATEGORIES.map(
         (c) =>
           `<button class="chip" data-cat="${c.key}" aria-pressed="${state.category === c.key}">${c.emoji} ${c.short ?? c.name}</button>`,
@@ -463,7 +503,7 @@ function renderDetail(product) {
   const model = buildModel(product);
   const { svg } = cardSVG(model);
   document.title = `${model.name} — ${APP.name}`;
-  const alts = lowSugarAlternatives(product, PRODUCTS, 3);
+  const alts = lowSugarAlternatives(product, listProducts(), 3);
   const currentSugar100 = Math.round((product.sugar / Math.max(1, product.weight)) * 1000) / 10;
   const maxSugar = Math.max(currentSugar100, ...alts.map((a) => a.sugar100), 1);
   const maxSodium = Math.max(
@@ -484,12 +524,14 @@ function renderDetail(product) {
       </div>`,
     )
     .join('');
-  const isCatalog = PRODUCTS.some((p) => p.id === product.id);
+  const isCatalog = isCatalogProduct(product.id);
+  const altLinks = Array.isArray(product.altLinks) ? product.altLinks : [];
 
   app.innerHTML = `
     <header class="topbar">
       <button class="back-btn" id="back" aria-label="뒤로">‹</button>
       <span class="title">${esc(model.name)}</span>
+      ${product.itemNo ? `<span class="item-no big" aria-label="아이템 번호 ${product.itemNo}">${formatItemNo(product.itemNo)}</span>` : ''}
       ${authChipHtml()}
     </header>
     <div class="card-wrap" id="card-wrap">${svg}</div>
@@ -506,7 +548,7 @@ function renderDetail(product) {
         이 제품: 당류 ${currentSugar100}g · 나트륨 ${Math.round((product.sodium / Math.max(1, product.weight)) * 100)}mg / 100g</p>
         ${altRows || '<p class="alt-note">비교할 다른 제품이 아직 없어요.</p>'}
         <div class="legend"><span><i style="background:#4f6b48"></i>당류</span><span><i style="background:#c0512a"></i>나트륨</span></div>
-        <div class="affiliate"><span>🛒</span><span>대체 간식 구매 링크(제휴)는 다음 업데이트에서 열려요. 지금은 비교 정보만 보여 드립니다.</span></div>
+        ${altLinksBlock(altLinks, product)}
       </div>
     </section>
     <section class="facts">
@@ -1623,7 +1665,833 @@ function renderBoard() {
   loadBoard();
 }
 
+/* ── 어드민 (#/admin) ─────────────────────────────
+   관리자(ADMIN_EMAIL)로 로그인했을 때만 열린다. 실제 쓰기 권한은 DB의
+   tb_is_admin() 정책이 최종으로 판단하고, 이 화면은 쓰기 UI만 담당한다. */
+const admin = {
+  tab: 'items',
+  q: '',
+  products: [],
+  productsLoaded: false,
+  productsLoading: false,
+  comments: [],
+  commentsLoaded: false,
+  commentsLoading: false,
+  feedback: [],
+  feedbackLoaded: false,
+  feedbackLoading: false,
+  form: null, // { mode:'new'|'edit', originalItemNo, values, altLinks }
+  saving: false,
+  error: '',
+};
+
+function isAdminUser() {
+  return Boolean(authState.isAdmin);
+}
+
+/** 로그인한 계정이 관리자인지 DB(tb_is_admin)에 물어본다 */
+async function refreshAdminFlag() {
+  const session = authState.session;
+  if (!session?.accessToken) {
+    authState.isAdmin = false;
+    return false;
+  }
+  try {
+    authState.isAdmin = await boardApi.checkIsAdmin({ accessToken: session.accessToken });
+  } catch {
+    // 네트워크 문제면 이메일만으로 판단하지 않고 보수적으로 false
+    authState.isAdmin = false;
+  }
+  return authState.isAdmin;
+}
+
+/** 관리자 요청에 쓸 유효한 세션 (만료 직전이면 갱신) */
+async function adminSession() {
+  const session = await currentSession();
+  if (!session?.accessToken) throw new BoardError('login', SESSION_ERROR);
+  return session;
+}
+
+function renderAdminGate() {
+  document.title = `어드민 — ${APP.name}`;
+  const signedIn = isSignedIn();
+  app.innerHTML = `
+    <header class="topbar">
+      <button class="back-btn" id="back" aria-label="뒤로">‹</button>
+      <span class="title" tabindex="-1">관리자 전용</span>
+      ${authChipHtml()}
+    </header>
+    <section class="admin-gate">
+      <p class="admin-gate-emoji" aria-hidden="true">🔒</p>
+      <h2>관리자 계정으로 로그인해 주세요</h2>
+      <p>어드민 화면은 관리자(<b>${esc(ADMIN_EMAIL)}</b>) 계정으로만 열 수 있어요.${
+        signedIn && authState.session?.user?.email
+          ? `<br />지금은 <b>${esc(authState.session.user.email)}</b> 계정으로 로그인되어 있어요.`
+          : ''
+      }</p>
+      <div class="admin-gate-actions">
+        ${
+          signedIn
+            ? `<button class="btn" id="gate-login">다른 계정으로 로그인</button>
+               <button class="btn secondary" id="gate-home">홈으로</button>`
+            : `<button class="btn" id="gate-login">구글·카카오·애플로 로그인</button>
+               <button class="btn secondary" id="gate-home">홈으로</button>`
+        }
+      </div>
+    </section>
+  `;
+  app.querySelector('#back').addEventListener('click', goBack);
+  app.querySelector('#gate-home').addEventListener('click', () => {
+    location.hash = '#/';
+  });
+  app.querySelector('#gate-login').addEventListener('click', async () => {
+    if (signedIn) {
+      await auth.signOut();
+      authState.session = null;
+      authState.profile = null;
+      authState.isAdmin = false;
+    }
+    openLoginSheet('관리자 계정으로 로그인해 주세요.');
+  });
+  bindAuthChip();
+}
+
+function renderAdmin() {
+  if (!isSignedIn() || !isAdminUser()) {
+    renderAdminGate();
+    return;
+  }
+  document.title = `어드민 — ${APP.name}`;
+
+  app.innerHTML = `
+    <header class="topbar">
+      <button class="back-btn" id="back" aria-label="뒤로">‹</button>
+      <span class="title" tabindex="-1">어드민 관리</span>
+      <span class="admin-who" title="관리자 계정">${esc(authState.session?.user?.email || ADMIN_EMAIL)}</span>
+      ${authChipHtml()}
+    </header>
+    <nav class="admin-tabs" role="tablist" aria-label="어드민 탭">
+      ${ADMIN_TABS.map(
+        (t) =>
+          `<button type="button" role="tab" class="admin-tab" data-tab="${t.key}" aria-selected="${admin.tab === t.key}">${t.label}</button>`,
+      ).join('')}
+    </nav>
+    <div class="admin-body" id="admin-body"></div>
+  `;
+
+  app.querySelector('#back').addEventListener('click', goBack);
+  app.querySelectorAll('.admin-tab').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      if (admin.tab === btn.dataset.tab) return;
+      admin.tab = btn.dataset.tab;
+      admin.form = null;
+      admin.error = '';
+      app.querySelectorAll('.admin-tab').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === admin.tab)));
+      renderAdminBody();
+      loadAdminTab();
+    });
+  });
+  bindAuthChip();
+  renderAdminBody();
+  loadAdminTab();
+}
+
+/** 지금 탭에 필요한 자료를 처음 한 번 불러온다 */
+function loadAdminTab() {
+  if (admin.tab === 'items' && !admin.productsLoaded && !admin.productsLoading) loadAdminProducts();
+  if (admin.tab === 'comments' && !admin.commentsLoaded && !admin.commentsLoading) loadAdminComments();
+  if (admin.tab === 'feedback' && !admin.feedbackLoaded && !admin.feedbackLoading) loadAdminFeedback();
+}
+
+function adminStatePanel({ title, detail, actionLabel, onAction }) {
+  return `<div class="board-state">
+    <b>${esc(title)}</b>
+    <p>${esc(detail)}</p>
+    ${actionLabel ? `<button type="button" class="retry-btn" id="admin-retry">${esc(actionLabel)}</button>` : ''}
+  </div>`;
+}
+
+function renderAdminBody() {
+  const body = app.querySelector('#admin-body');
+  if (!body) return;
+  if (admin.tab === 'items') renderAdminItems(body);
+  else if (admin.tab === 'comments') renderAdminComments(body);
+  else renderAdminFeedback(body);
+}
+
+function bindAdminRetry(run) {
+  app.querySelector('#admin-retry')?.addEventListener('click', run);
+}
+
+/* ── 탭 1: 아이템·성분 ───────────────────────── */
+function renderAdminItems(body) {
+  if (admin.form) {
+    renderAdminForm(body);
+    return;
+  }
+  if (admin.productsLoading) {
+    body.innerHTML = adminStatePanel({ title: '아이템을 불러오는 중이에요', detail: '잠시만 기다려 주세요.' });
+    return;
+  }
+  if (admin.error) {
+    body.innerHTML = adminStatePanel({
+      title: '아이템을 불러오지 못했어요',
+      detail: admin.error,
+      actionLabel: '다시 불러오기',
+    });
+    bindAdminRetry(() => loadAdminProducts(true));
+    return;
+  }
+
+  body.innerHTML = `
+    <div class="admin-bar">
+      <label class="search admin-search">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/>
+          <path d="M16.5 16.5 21 21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <input id="admin-q" type="search" value="${esc(admin.q)}" placeholder="번호·이름·제조사 검색" aria-label="아이템 검색" autocomplete="off" />
+      </label>
+      <button type="button" class="btn small" id="admin-new">+ 새 아이템</button>
+    </div>
+    <div id="admin-list"></div>
+  `;
+
+  const input = body.querySelector('#admin-q');
+  input.addEventListener('input', () => {
+    admin.q = input.value;
+    renderAdminList();
+  });
+  body.querySelector('#admin-new').addEventListener('click', () => startAdminForm('new'));
+  renderAdminList();
+}
+
+function renderAdminList() {
+  const wrap = app.querySelector('#admin-list');
+  if (!wrap) return;
+  const list = admin.products.filter((p) => matchesProductQuery(p, admin.q));
+  if (!list.length) {
+    wrap.innerHTML = admin.products.length
+      ? `<p class="empty">‘${esc(admin.q)}’에 맞는 아이템이 없어요.</p>`
+      : `<p class="empty">아직 아이템이 없어요. <b>+ 새 아이템</b>으로 첫 아이템을 추가해 보세요.</p>`;
+    return;
+  }
+  wrap.innerHTML = `<p class="admin-count">${list.length}개 · 전체 ${admin.products.length}개</p>
+    <ul class="admin-list">
+      ${list
+        .map((p) => {
+          const cat = CATEGORIES.find((c) => c.key === p.category)?.name ?? p.category;
+          return `<li class="admin-row${p.isActive ? '' : ' off'}">
+            <span class="item-no">${p.itemNo ? formatItemNo(p.itemNo) : '—'}</span>
+            <span class="admin-row-main">
+              <b>${esc(p.name)}</b>
+              <em>${esc(p.brand || '제조사 없음')} · ${esc(cat)} · ${fmtAmount(p.weight)}${p.unit} · ${p.kcal} kcal${
+                Array.isArray(p.altLinks) && p.altLinks.length ? ` · 링크 ${p.altLinks.length}` : ''
+              }</em>
+            </span>
+            ${p.isActive ? '' : '<span class="admin-hidden-badge">숨김</span>'}
+            <button type="button" class="btn small ghost" data-edit="${esc(p.id)}">수정</button>
+          </li>`;
+        })
+        .join('')}
+    </ul>`;
+
+  wrap.querySelectorAll('[data-edit]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const product = admin.products.find((p) => p.id === btn.dataset.edit);
+      if (product) startAdminForm('edit', product);
+    });
+  });
+}
+
+function startAdminForm(mode, product) {
+  const base = product ?? {};
+  admin.form = {
+    mode,
+    originalItemNo: product?.itemNo ?? null,
+    originalId: product?.id ?? '',
+    bulk: Array.isArray(product?.bulk) ? product.bulk : [],
+    values: {
+      itemNo: mode === 'new' ? nextItemNo(admin.products) : (product?.itemNo ?? ''),
+      name: base.name ?? '',
+      brand: base.brand ?? '',
+      category: base.category ?? 'snack',
+      unit: base.unit ?? 'g',
+      weight: base.weight ?? '',
+      kcal: base.kcal ?? '',
+      sodium: base.sodium ?? '',
+      sugar: base.sugar ?? '',
+      fat: base.fat ?? '',
+      carbs: base.carbs ?? 0,
+      protein: base.protein ?? 0,
+      ingredients: Array.isArray(base.ingredients) ? base.ingredients.join(', ') : '',
+      note: base.note ?? '',
+      isActive: base.isActive !== false,
+    },
+    altLinks: Array.isArray(base.altLinks) ? base.altLinks.map((l) => ({ ...l })) : [],
+  };
+  admin.error = '';
+  renderAdminBody();
+}
+
+function altLinkRowHtml(link = {}) {
+  const platform = ALT_PLATFORMS.some((p) => p.key === link.platform) ? link.platform : 'coupang';
+  return `<li class="alt-edit-row">
+    <div class="alt-edit-top">
+      <label class="sr-only">링크 상품명</label>
+      <input class="alt-title" type="text" maxlength="${PRODUCT_LIMITS.altTitleMax}" placeholder="상품명 (예: 무설탕 버터쿠키 200g)" value="${esc(link.title ?? '')}" />
+      <button type="button" class="alt-remove" aria-label="이 링크 삭제">✕</button>
+    </div>
+    <div class="alt-edit-mid">
+      <label class="sr-only">플랫폼</label>
+      <select class="alt-platform">
+        ${ALT_PLATFORMS.map((p) => `<option value="${p.key}"${p.key === platform ? ' selected' : ''}>${p.label}</option>`).join('')}
+      </select>
+      <label class="sr-only">링크 주소</label>
+      <input class="alt-url" type="url" inputmode="url" maxlength="${PRODUCT_LIMITS.urlMax}" placeholder="https://..." value="${esc(link.url ?? '')}" />
+    </div>
+    <label class="sr-only">짧은 메모</label>
+    <input class="alt-note" type="text" maxlength="${PRODUCT_LIMITS.altNoteMax}" placeholder="메모 (선택, 예: 당류 0g)" value="${esc(link.note ?? '')}" />
+  </li>`;
+}
+
+function renderAdminForm(body) {
+  const { mode, values, altLinks } = admin.form;
+  const editing = mode === 'edit';
+  const err = (key) => `<p class="field-error" data-err="${key}" role="alert" hidden></p>`;
+
+  body.innerHTML = `
+    <section class="admin-form-card">
+      <div class="admin-form-head">
+        <h2>${editing ? `아이템 수정 · ${esc(values.name || admin.form.originalId)}` : '새 아이템 추가'}</h2>
+        <button type="button" class="btn small ghost" id="admin-cancel">취소</button>
+      </div>
+      <form class="form admin-form" id="admin-form" novalidate>
+        <p class="form-error" id="admin-form-error" role="alert" hidden></p>
+        <div class="row-2">
+          <div class="field">
+            <label for="f-itemno">아이템 번호</label>
+            <input id="f-itemno" type="number" min="1" max="${PRODUCT_LIMITS.itemNoMax}" inputmode="numeric" value="${esc(values.itemNo)}" />
+            <p class="hint">비우면 새 번호(${nextItemNo(admin.products)}번)로 붙어요</p>
+            ${err('itemNo')}
+          </div>
+          <div class="field">
+            <label for="f-name">제품명 *</label>
+            <input id="f-name" type="text" maxlength="${PRODUCT_LIMITS.nameMax}" value="${esc(values.name)}" />
+            ${err('name')}
+          </div>
+        </div>
+        <div class="row-2">
+          <div class="field">
+            <label for="f-brand">제조사</label>
+            <input id="f-brand" type="text" maxlength="${PRODUCT_LIMITS.brandMax}" value="${esc(values.brand)}" />
+            ${err('brand')}
+          </div>
+          <div class="field">
+            <label for="f-category">카테고리</label>
+            <select id="f-category">
+              ${CATEGORIES.map((c) => `<option value="${c.key}"${c.key === values.category ? ' selected' : ''}>${c.emoji} ${c.name}</option>`).join('')}
+            </select>
+            ${err('category')}
+          </div>
+        </div>
+        <div class="row-2">
+          <div class="field">
+            <label for="f-unit">단위</label>
+            <select id="f-unit">
+              ${PRODUCT_UNITS.map((u) => `<option value="${u.key}"${u.key === values.unit ? ' selected' : ''}>${u.label}</option>`).join('')}
+            </select>
+            ${err('unit')}
+          </div>
+          <div class="field">
+            <label for="f-weight">중량 (g/ml)</label>
+            <input id="f-weight" type="number" step="0.1" min="0" inputmode="decimal" value="${esc(values.weight)}" />
+            ${err('weight')}
+          </div>
+        </div>
+        <div class="admin-grid">
+          <div class="field"><label for="f-kcal">열량 (kcal)</label><input id="f-kcal" type="number" step="1" min="0" inputmode="decimal" value="${esc(values.kcal)}" />${err('kcal')}</div>
+          <div class="field"><label for="f-sodium">나트륨 (mg)</label><input id="f-sodium" type="number" step="0.1" min="0" inputmode="decimal" value="${esc(values.sodium)}" />${err('sodium')}</div>
+          <div class="field"><label for="f-sugar">당류 (g)</label><input id="f-sugar" type="number" step="0.1" min="0" inputmode="decimal" value="${esc(values.sugar)}" />${err('sugar')}</div>
+          <div class="field"><label for="f-fat">지방 (g)</label><input id="f-fat" type="number" step="0.1" min="0" inputmode="decimal" value="${esc(values.fat)}" />${err('fat')}</div>
+          <div class="field"><label for="f-carbs">탄수화물 (g)</label><input id="f-carbs" type="number" step="0.1" min="0" inputmode="decimal" value="${esc(values.carbs)}" />${err('carbs')}</div>
+          <div class="field"><label for="f-protein">단백질 (g)</label><input id="f-protein" type="number" step="0.1" min="0" inputmode="decimal" value="${esc(values.protein)}" />${err('protein')}</div>
+        </div>
+        <div class="field">
+          <label for="f-ingredients">원재료 (쉼표로 구분)</label>
+          <textarea id="f-ingredients" rows="2" placeholder="밀가루, 설탕, 팜유">${esc(values.ingredients)}</textarea>
+        </div>
+        <div class="field">
+          <label for="f-note">한줄 설명</label>
+          <input id="f-note" type="text" maxlength="${PRODUCT_LIMITS.noteMax}" value="${esc(values.note)}" />
+          ${err('note')}
+        </div>
+
+        <div class="admin-alt-block">
+          <div class="admin-alt-head">
+            <b>대체상품 링크</b>
+            <span class="hint">상세 화면의 ‘저당·대체 간식’ 아래에 보여요</span>
+          </div>
+          <ul class="alt-edit-list" id="alt-edit-list">
+            ${altLinks.map((l) => altLinkRowHtml(l)).join('')}
+          </ul>
+          <p class="field-error" data-err="altLinks" role="alert" hidden></p>
+          <button type="button" class="btn small secondary" id="alt-add">+ 링크 추가</button>
+          <p class="admin-alt-note">쿠팡 파트너스·네이버 쇼핑 등 제휴 링크를 넣을 수 있어요. 주소는 http:// 또는 https://만 저장돼요.</p>
+        </div>
+
+        <label class="admin-toggle">
+          <input type="checkbox" id="f-active"${values.isActive ? ' checked' : ''} />
+          <span>앱에 노출하기 (끄면 관리자만 볼 수 있어요)</span>
+        </label>
+
+        <div class="form-actions">
+          <button type="submit" class="btn" id="admin-save">${editing ? '저장' : '추가하기'}</button>
+          <button type="button" class="btn secondary" id="admin-cancel-2">취소</button>
+          ${editing ? '<button type="button" class="btn danger" id="admin-delete">삭제</button>' : ''}
+        </div>
+      </form>
+    </section>
+  `;
+
+  const list = body.querySelector('#alt-edit-list');
+  body.querySelector('#alt-add').addEventListener('click', () => {
+    if (list.children.length >= PRODUCT_LIMITS.altLinksMax) {
+      showToast(`링크는 ${PRODUCT_LIMITS.altLinksMax}개까지 넣을 수 있어요.`);
+      return;
+    }
+    list.insertAdjacentHTML('beforeend', altLinkRowHtml({}));
+    list.lastElementChild.querySelector('.alt-title')?.focus();
+  });
+  list.addEventListener('click', (event) => {
+    const btn = event.target.closest('.alt-remove');
+    if (btn) btn.closest('.alt-edit-row').remove();
+  });
+
+  const back = () => {
+    admin.form = null;
+    renderAdminBody();
+  };
+  body.querySelector('#admin-cancel').addEventListener('click', back);
+  body.querySelector('#admin-cancel-2').addEventListener('click', back);
+  body.querySelector('#admin-form').addEventListener('submit', (event) => {
+    event.preventDefault();
+    saveAdminProduct();
+  });
+  body.querySelector('#admin-delete')?.addEventListener('click', () => deleteAdminProduct());
+}
+
+/** 폼에 적힌 값을 그대로 읽는다 (입력 중 다시 그리지 않아 한글 조합이 끊기지 않게) */
+function readAdminFormValues() {
+  const val = (id) => app.querySelector(`#${id}`)?.value ?? '';
+  const altLinks = [...app.querySelectorAll('#alt-edit-list .alt-edit-row')].map((row) => ({
+    title: row.querySelector('.alt-title')?.value ?? '',
+    url: row.querySelector('.alt-url')?.value ?? '',
+    platform: row.querySelector('.alt-platform')?.value ?? 'etc',
+    note: row.querySelector('.alt-note')?.value ?? '',
+  }));
+  return {
+    itemNo: val('f-itemno'),
+    name: val('f-name'),
+    brand: val('f-brand'),
+    category: val('f-category'),
+    unit: val('f-unit'),
+    weight: val('f-weight'),
+    kcal: val('f-kcal'),
+    sodium: val('f-sodium'),
+    sugar: val('f-sugar'),
+    fat: val('f-fat'),
+    carbs: val('f-carbs'),
+    protein: val('f-protein'),
+    ingredients: val('f-ingredients'),
+    note: val('f-note'),
+    isActive: Boolean(app.querySelector('#f-active')?.checked),
+    altLinks,
+  };
+}
+
+function showAdminFormError(message) {
+  const box = app.querySelector('#admin-form-error');
+  if (!box) return;
+  box.hidden = !message;
+  box.textContent = message || '';
+}
+
+async function saveAdminProduct() {
+  if (!admin.form || admin.saving) return;
+  const { ok, errors, value } = validateProductInput(readAdminFormValues());
+
+  app.querySelectorAll('[data-err]').forEach((el) => {
+    const key = el.dataset.err;
+    el.hidden = !errors[key];
+    el.textContent = errors[key] ?? '';
+  });
+  app.querySelectorAll('.field input, .field select, .field textarea').forEach((el) => el.classList.remove('invalid'));
+  if (!ok) {
+    showAdminFormError('입력한 값을 다시 확인해 주세요.');
+    const first = Object.keys(errors)[0];
+    const el = app.querySelector(`[data-err="${first}"]`);
+    const field = el?.parentElement?.querySelector('input, select, textarea');
+    field?.classList.add('invalid');
+    field?.focus();
+    return;
+  }
+
+  const saveBtn = app.querySelector('#admin-save');
+  admin.saving = true;
+  if (saveBtn) {
+    saveBtn.disabled = true;
+    saveBtn.textContent = '저장 중...';
+  }
+  showAdminFormError('');
+
+  try {
+    const session = await adminSession();
+    const isNew = admin.form.mode === 'new';
+    const id = isNew ? uniqueProductId(value.name, value.itemNo) : admin.form.originalId;
+    const row = productToRow({ ...value, id, bulk: admin.form.bulk });
+    if (isNew) {
+      const saved = await boardApi.createProduct(row, { accessToken: session.accessToken });
+      showToast(`${formatItemNo(saved.item_no) || ''} ${saved.name} 추가했어요.`.trim());
+    } else {
+      delete row.id; // id(슬러그)는 그대로 둔다
+      const saved = await boardApi.updateProduct(admin.form.originalItemNo, row, {
+        accessToken: session.accessToken,
+      });
+      showToast(`${formatItemNo(saved.item_no) || ''} ${saved.name} 수정했어요.`.trim());
+    }
+    admin.form = null;
+    admin.saving = false;
+    await reloadAdminProducts();
+  } catch (err) {
+    showAdminFormError(friendlyMessage(err));
+    admin.saving = false;
+    if (saveBtn) {
+      saveBtn.disabled = false;
+      saveBtn.textContent = '저장';
+    }
+  }
+}
+
+function uniqueProductId(name, itemNo) {
+  const base = slugify(name) || `item-${itemNo || Date.now()}`;
+  const taken = new Set(admin.products.map((p) => p.id));
+  if (!taken.has(base)) return base;
+  let n = 2;
+  while (taken.has(`${base}-${n}`)) n += 1;
+  return `${base}-${n}`;
+}
+
+async function deleteAdminProduct() {
+  if (!admin.form || admin.form.mode !== 'edit') return;
+  const name = admin.form.values.name || admin.form.originalId;
+  if (!window.confirm(`‘${name}’ 아이템을 삭제할까요? 이 아이템의 댓글은 그대로 남아요.`)) return;
+  const btn = app.querySelector('#admin-delete');
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = '삭제 중...';
+  }
+  try {
+    const session = await adminSession();
+    const removed = await boardApi.deleteProduct(admin.form.originalItemNo, { accessToken: session.accessToken });
+    if (!removed) throw new BoardError('auth', '이 아이템을 지우지 못했어요. 관리자 계정인지 확인해 주세요.');
+    showToast(`‘${name}’ 삭제했어요.`);
+    admin.form = null;
+    await reloadAdminProducts();
+  } catch (err) {
+    showToast(friendlyMessage(err));
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = '삭제';
+    }
+  }
+}
+
+/** 아이템 목록을 DB에서 다시 읽어 화면·앱 목록을 함께 갱신한다 */
+async function reloadAdminProducts() {
+  admin.productsLoaded = false;
+  const ok = await loadAdminProducts(true);
+  if (ok) {
+    const active = admin.products.filter((p) => p.isActive);
+    setProducts(active);
+    if (!active.length) resetProducts();
+  }
+  renderAdminBody();
+}
+
+async function loadAdminProducts(force = false) {
+  if (admin.productsLoading) return false;
+  if (admin.productsLoaded && !force) return true;
+  admin.productsLoading = true;
+  admin.error = '';
+  renderAdminBody();
+  try {
+    const session = await adminSession();
+    const rows = await boardApi.fetchProducts({ includeInactive: true, accessToken: session.accessToken });
+    admin.products = rows.map(rowToProduct).filter(Boolean);
+    admin.productsLoaded = true;
+    admin.productsLoading = false;
+    renderAdminBody();
+    return true;
+  } catch (err) {
+    admin.productsLoading = false;
+    admin.error = friendlyMessage(err);
+    renderAdminBody();
+    return false;
+  }
+}
+
+/* ── 탭 2: 댓글 관리 ─────────────────────────── */
+async function loadAdminComments(force = false) {
+  if (admin.commentsLoading) return;
+  if (admin.commentsLoaded && !force) return;
+  admin.commentsLoading = true;
+  admin.error = '';
+  renderAdminBody();
+  try {
+    const session = await adminSession();
+    admin.comments = await boardApi.fetchAllCommentsForAdmin({ accessToken: session.accessToken });
+    admin.commentsLoaded = true;
+  } catch (err) {
+    admin.error = friendlyMessage(err);
+  } finally {
+    admin.commentsLoading = false;
+    renderAdminBody();
+  }
+}
+
+function productNameById(id) {
+  return admin.products.find((p) => p.id === id)?.name ?? id;
+}
+
+function renderAdminComments(body) {
+  if (admin.commentsLoading) {
+    body.innerHTML = adminStatePanel({ title: '댓글을 불러오는 중이에요', detail: '잠시만 기다려 주세요.' });
+    return;
+  }
+  if (admin.error) {
+    body.innerHTML = adminStatePanel({
+      title: '댓글을 불러오지 못했어요',
+      detail: admin.error,
+      actionLabel: '다시 불러오기',
+    });
+    bindAdminRetry(() => loadAdminComments(true));
+    return;
+  }
+  if (!admin.comments.length) {
+    body.innerHTML = `<p class="empty">아직 남겨진 댓글이 없어요.</p>`;
+    return;
+  }
+  body.innerHTML = `
+    <p class="admin-count">전체 ${admin.comments.length}개 · 최신순</p>
+    <ul class="admin-comments">
+      ${admin.comments
+        .map(
+          (c) => `<li class="admin-comment" data-id="${esc(c.id)}">
+        <div class="admin-comment-top">
+          <span class="admin-comment-product">${esc(productNameById(c.product_id))}</span>
+          <time datetime="${esc(c.created_at)}">${esc(relativeTime(c.created_at))}</time>
+        </div>
+        <p class="admin-comment-body">${esc(c.body)}</p>
+        <div class="admin-comment-foot">
+          <span class="admin-comment-nick">${esc(c.nickname || '익명')}</span>
+          <button type="button" class="btn small ghost danger" data-del-comment="${esc(c.id)}">삭제</button>
+        </div>
+      </li>`,
+        )
+        .join('')}
+    </ul>
+  `;
+  body.querySelectorAll('[data-del-comment]').forEach((btn) => {
+    btn.addEventListener('click', () => deleteAdminComment(btn.dataset.delComment, btn));
+  });
+}
+
+async function deleteAdminComment(id, btn) {
+  const row = admin.comments.find((c) => c.id === id);
+  if (!row) return;
+  if (!window.confirm(`‘${row.nickname || '익명'}’님의 댓글을 삭제할까요?\n\n${row.body.slice(0, 80)}`)) return;
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = '삭제 중...';
+  }
+  try {
+    const session = await adminSession();
+    const removed = await boardApi.deleteCommentByAdmin(id, { accessToken: session.accessToken });
+    if (!removed) throw new BoardError('auth', '이 댓글을 지우지 못했어요. 관리자 계정인지 확인해 주세요.');
+    admin.comments = admin.comments.filter((c) => c.id !== id);
+    showToast('댓글을 삭제했어요.');
+    renderAdminBody();
+  } catch (err) {
+    showToast(friendlyMessage(err));
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = '삭제';
+    }
+  }
+}
+
+/* ── 탭 3: 제안·제보 관리 ────────────────────── */
+async function loadAdminFeedback(force = false) {
+  if (admin.feedbackLoading) return;
+  if (admin.feedbackLoaded && !force) return;
+  admin.feedbackLoading = true;
+  admin.error = '';
+  renderAdminBody();
+  try {
+    const session = await adminSession();
+    admin.feedback = await boardApi.fetchAllFeedbackForAdmin({ accessToken: session.accessToken });
+    admin.feedbackLoaded = true;
+  } catch (err) {
+    admin.error = friendlyMessage(err);
+  } finally {
+    admin.feedbackLoading = false;
+    renderAdminBody();
+  }
+}
+
+function renderAdminFeedback(body) {
+  if (admin.feedbackLoading) {
+    body.innerHTML = adminStatePanel({ title: '제안·제보를 불러오는 중이에요', detail: '잠시만 기다려 주세요.' });
+    return;
+  }
+  if (admin.error) {
+    body.innerHTML = adminStatePanel({
+      title: '제안·제보를 불러오지 못했어요',
+      detail: admin.error,
+      actionLabel: '다시 불러오기',
+    });
+    bindAdminRetry(() => loadAdminFeedback(true));
+    return;
+  }
+  if (!admin.feedback.length) {
+    body.innerHTML = `<p class="empty">아직 들어온 제안·제보가 없어요.</p>`;
+    return;
+  }
+  const openCount = admin.feedback.filter((f) => f.status !== 'done').length;
+  body.innerHTML = `
+    <p class="admin-count">전체 ${admin.feedback.length}개 · 대기 ${openCount}개</p>
+    <ul class="admin-feedback">
+      ${admin.feedback
+        .map((f) => {
+          const cat = BOARD_CATEGORIES.find((c) => c.key === f.category);
+          const done = f.status === 'done';
+          return `<li class="admin-fb" data-id="${esc(f.id)}">
+        <div class="admin-fb-top">
+          <span class="tag ${esc(f.category)}">${esc(cat?.name ?? f.category)}</span>
+          <span class="status ${done ? 'done' : 'open'}">${done ? '완료' : '대기'}</span>
+          <time datetime="${esc(f.created_at)}">${esc(relativeTime(f.created_at))}</time>
+        </div>
+        <b class="admin-fb-title">${esc(f.title)}</b>
+        <p class="admin-fb-body">${esc(f.body)}</p>
+        <div class="admin-fb-foot">
+          <span class="admin-comment-nick">${esc(f.nickname || '익명')}</span>
+          <span class="admin-fb-actions">
+            <button type="button" class="btn small secondary" data-toggle-fb="${esc(f.id)}">${done ? '대기로' : '완료로'}</button>
+            <button type="button" class="btn small ghost danger" data-del-fb="${esc(f.id)}">삭제</button>
+          </span>
+        </div>
+      </li>`;
+        })
+        .join('')}
+    </ul>
+  `;
+  body.querySelectorAll('[data-toggle-fb]').forEach((btn) => {
+    btn.addEventListener('click', () => toggleAdminFeedback(btn.dataset.toggleFb, btn));
+  });
+  body.querySelectorAll('[data-del-fb]').forEach((btn) => {
+    btn.addEventListener('click', () => deleteAdminFeedback(btn.dataset.delFb, btn));
+  });
+}
+
+async function toggleAdminFeedback(id, btn) {
+  const row = admin.feedback.find((f) => f.id === id);
+  if (!row) return;
+  const next = row.status === 'done' ? 'open' : 'done';
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = '바꾸는 중...';
+  }
+  try {
+    const session = await adminSession();
+    await boardApi.updateFeedbackStatus(id, next, { accessToken: session.accessToken });
+    row.status = next;
+    showToast(next === 'done' ? '완료로 바꿨어요.' : '대기로 되돌렸어요.');
+    renderAdminBody();
+  } catch (err) {
+    showToast(friendlyMessage(err));
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = '다시 시도';
+    }
+  }
+}
+
+async function deleteAdminFeedback(id, btn) {
+  const row = admin.feedback.find((f) => f.id === id);
+  if (!row) return;
+  if (!window.confirm(`‘${row.title}’ 글을 삭제할까요?`)) return;
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = '삭제 중...';
+  }
+  try {
+    const session = await adminSession();
+    const removed = await boardApi.deleteFeedbackByAdmin(id, { accessToken: session.accessToken });
+    if (!removed) throw new BoardError('auth', '이 글을 지우지 못했어요. 관리자 계정인지 확인해 주세요.');
+    admin.feedback = admin.feedback.filter((f) => f.id !== id);
+    showToast('글을 삭제했어요.');
+    renderAdminBody();
+  } catch (err) {
+    showToast(friendlyMessage(err));
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = '삭제';
+    }
+  }
+}
+
+/* ── 상세 화면: 대체상품 링크 ─────────────────── */
+function altLinksBlock(links, product) {
+  const safe = (links ?? []).filter((l) => l && /^https?:\/\//i.test(String(l.url ?? '')));
+  if (!safe.length) {
+    return `<div class="affiliate"><span>🛒</span><span>대체 간식 구매 링크(제휴)는 준비 중이에요. 지금은 비교 정보만 보여 드립니다.</span></div>`;
+  }
+  return `<div class="alt-links">
+    <p class="alt-links-head">🛒 ${esc(product.name)} 구매 링크</p>
+    <div class="alt-link-list">
+      ${safe
+        .map(
+          (l) => `<a class="alt-link" href="${esc(l.url)}" target="_blank" rel="noopener noreferrer">
+        <span class="alt-pf ${esc(l.platform || 'etc')}">${esc(PLATFORM_LABEL[l.platform] ?? '기타')}</span>
+        <span class="alt-link-body">
+          <b>${esc(l.title)}</b>
+          ${l.note ? `<em>${esc(l.note)}</em>` : ''}
+        </span>
+        <span class="alt-go" aria-hidden="true">›</span>
+      </a>`,
+        )
+        .join('')}
+    </div>
+    <p class="alt-links-note">제휴 링크가 포함될 수 있어요. 가격·재고는 판매처 기준입니다.</p>
+  </div>`;
+}
+
 /* ── PNG 내보내기 ────────────────────────────── */
+const embedCardFont = createFontEmbedder();
+
+/** 앱 시작: DB 상품 목록을 먼저 받아 오고, 실패하면 data/products.js를 쓴다 */
+async function loadCatalog() {
+  try {
+    const rows = await boardApi.fetchProducts();
+    const products = rows.map(rowToProduct).filter((p) => p && p.id);
+    if (products.length) setProducts(products);
+    else resetProducts();
+  } catch {
+    resetProducts();
+  }
+}
+
 async function svgToBlob(svgEl, targetWidth = 1080) {
   const vb = svgEl.viewBox.baseVal;
   const ratio = targetWidth / vb.width;
@@ -1638,7 +2506,9 @@ async function svgToBlob(svgEl, targetWidth = 1080) {
   clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
   clone.setAttribute('width', canvas.width);
   clone.setAttribute('height', canvas.height);
-  const xml = new XMLSerializer().serializeToString(clone);
+  // 카드 PNG에는 Jua 글꼴을 SVG 안에 심어서 내보낸다(문서 폰트는 <img>에 전달되지 않는다)
+  const serialized = new XMLSerializer().serializeToString(clone);
+  const xml = await embedCardFont(serialized);
   const url = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(xml)}`;
 
   const img = new Image();
@@ -1692,6 +2562,14 @@ function route() {
   // 화면이 바뀌면 항상 맨 위부터 (목록에서 스크롤한 상태로 상세에 들어가면 카드 윗부분이 잘린다)
   window.scrollTo(0, 0);
   const hash = (location.hash || '#/').replace(/\/+$/, '') || '#/';
+  // 어드민은 표가 많아 데스크톱에서 조금 넓게 쓴다
+  app.classList.toggle('app-wide', hash.startsWith('#/admin'));
+
+  if (hash === '#/admin' || hash.startsWith('#/admin/')) {
+    if (hash !== '#/admin') history.replaceState(null, '', `${location.pathname}${location.search}#/admin`);
+    renderAdmin();
+    return focusScreenTitle();
+  }
 
   const bm = hash.match(/^#\/board(?:\/([a-z_]+))?$/);
   if (bm) {
@@ -1757,7 +2635,11 @@ async function bootstrap() {
       console.warn('[auth] 내 프로필을 불러오지 못했어요', err);
       authState.profile = null;
     }
+    await refreshAdminFlag();
   }
+
+  // 홈·상세에 쓸 상품 목록: DB → 실패하면 내장 34종
+  await loadCatalog();
 
   route();
 
