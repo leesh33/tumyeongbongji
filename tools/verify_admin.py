@@ -194,10 +194,10 @@ with sync_playwright() as p:
     check('홈: 아이템 번호(#001) 노출', len(nos) == 3 and nos[0].startswith('#'), nos)
     check('홈: 390 가로 넘침 0', overflow(page) <= 0, f'{overflow(page)}px')
 
-    font = page.evaluate("() => ({ body: getComputedStyle(document.body).fontFamily, jua: document.fonts.check('16px Jua') })")
+    font = page.evaluate("() => ({ body: getComputedStyle(document.body).fontFamily, gowun: document.fonts.check('16px "Gowun Dodum"') })")
     report['results']['font'] = font
-    check('Jua 폰트: body에 적용', 'Jua' in font['body'], font['body'][:60])
-    check('Jua 폰트: 실제 로드됨(document.fonts)', font['jua'] is True, font['jua'])
+    check('Gowun Dodum 폰트: body에 적용', 'Gowun Dodum' in font['body'], font['body'][:60])
+    check('Gowun Dodum 폰트: 실제 로드됨(document.fonts)', font['gowun'] is True, font['gowun'])
 
     page.fill('#q', '#004')
     page.wait_for_timeout(250)
@@ -385,7 +385,7 @@ with sync_playwright() as p:
         check('PNG 내보내기: 파일 생성', download.suggested_filename.endswith('.png'), download.suggested_filename)
         page.wait_for_timeout(800)
         subset = [u for u in font_requests if 'css2' in u and 'text=' in u]
-        check('PNG 내보내기: Jua 서브셋 폰트 요청', len(subset) >= 1, (subset[0][:110] if subset else 'none'))
+        check('PNG 내보내기: Gowun Dodum 서브셋 폰트 요청', len(subset) >= 1, (subset[0][:110] if subset else 'none'))
         check('PNG 내보내기: 폰트 파일(woff2) 요청',
               any('fonts.gstatic.com' in u for u in font_requests), len(font_requests))
     except Exception as err:  # noqa: BLE001
