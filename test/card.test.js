@@ -54,6 +54,61 @@ test('긴 제품명은 글자를 줄여 카드 폭에 맞춘다', () => {
   assert.ok(svg.includes('font-size="16"') || svg.includes('font-size="17"'));
 });
 
+test('카드 헤더: 카테고리 알약과 제조사 딱지가 따로 놓인다', () => {
+  const { svg } = cardSVG(model);
+  // 카테고리 칩(과자)
+  assert.ok(svg.includes('fill="#EFE1CE"'), '카테고리 칩 배경');
+  assert.ok(svg.includes('>과자</text>'), '카테고리 이름');
+  // 제조사 딱지(농심 + 심볼)
+  assert.ok(svg.includes('fill="#FAF4EA" stroke="#E3D6C4" stroke-width="1"'), '딱지 배경·테두리');
+  assert.ok(svg.includes('>농심</text>'), '제조사 이름');
+  assert.ok(svg.includes('scale(0.8125)'), '심볼 13px 축소');
+  assert.ok(svg.includes('#DE2A1F'), '농심 대표 색 심볼');
+  // 예전처럼 한 칩에 '과자 · 농심'으로 붙지 않는다
+  assert.ok(!svg.includes('과자 · 농심'), '한 칩으로 합쳐지면 안 됨');
+  assert.ok(!/<image\b/.test(svg), '외부 이미지를 쓰지 않음');
+});
+
+test('카드 헤더: 딱지는 카테고리 칩 오른쪽 6px, 카드 폭 안에 들어간다', () => {
+  for (const p of PRODUCTS) {
+    const { svg, width } = cardSVG(buildModel(p));
+    const pill = svg.match(/<rect x="([\d.]+)" y="22" width="([\d.]+)"[^>]*fill="#FAF4EA"/);
+    assert.ok(pill, `${p.id} 딱지 없음`);
+    assert.ok(Number(pill[1]) + Number(pill[2]) <= width - 18 + 0.01, `${p.id} 딱지가 카드 밖으로 넘침`);
+    const cat = svg.match(/<rect x="18" y="22" width="([\d.]+)"[^>]*fill="#EFE1CE"/);
+    assert.ok(cat, `${p.id} 카테고리 칩 없음`);
+    assert.ok(Math.abs(Number(pill[1]) - (18 + Number(cat[1]) + 6)) < 0.01, `${p.id} 간격 6px 아님`);
+  }
+});
+
+test('카드 헤더: 브랜드가 없으면 카테고리 칩만 그린다', () => {
+  const m = buildModel({ id: 'custom', name: '내 과자', brand: '   ', category: 'drink', weight: 60, kcal: 300, sodium: 300, sugar: 12, fat: 8 });
+  assert.equal(m.brand, '');
+  const { svg } = cardSVG(m);
+  assert.ok(svg.includes('>음료</text>'), '카테고리 칩은 남는다');
+  assert.ok(!svg.includes('#FAF4EA'), '딱지 배경이 없어야 함');
+  assert.ok(!svg.includes('직접 입력'), '빈 브랜드 자리표시가 없어야 함');
+  assert.ok(!svg.includes('scale(0.8125)'), '심볼이 없어야 함');
+});
+
+test('카드 헤더: 제조사 이름은 XSS 안전하게 이스케이프된다', () => {
+  const evil = '<img src=x onerror="alert(1)">';
+  const m = buildModel({ ...PRODUCTS[0], brand: evil });
+  const { svg } = cardSVG(m);
+  assert.ok(!svg.includes('<img'), '태그가 살아 있음');
+  assert.ok(!svg.includes('onerror="'), '속성이 살아 있음');
+  assert.ok(svg.includes('&lt;img src=x onerror=&quot;alert(1)&quot;&gt;'), '이스케이프된 이름');
+});
+
+test('카드 헤더: 아주 긴 제조사 이름은 카드 안에서 말줄임된다', () => {
+  const m = buildModel({ ...PRODUCTS[0], brand: '아주아주아주아주아주아주아주아주아주아주긴제조사이름' });
+  const { svg, width } = cardSVG(m);
+  const pill = svg.match(/<rect x="([\d.]+)" y="22" width="([\d.]+)"[^>]*fill="#FAF4EA"/);
+  assert.ok(pill, '딱지 없음');
+  assert.ok(Number(pill[1]) + Number(pill[2]) <= width - 18 + 0.01, '딱지가 넘침');
+  assert.ok(svg.includes('…'), '말줄임 없음');
+});
+
 test('spreadLabels는 최소 간격을 지킨다', () => {
   const ys = spreadLabels([100, 104, 106, 300], 30, 90, 320);
   const sorted = [...ys].sort((a, b) => a - b);
