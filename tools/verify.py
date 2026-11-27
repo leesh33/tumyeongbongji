@@ -1,4 +1,4 @@
-"""투명봉지 기능 검증 (390×844 · iPhone UA).
+"""속보이네 기능 검증 (390×844 · iPhone UA).
 홈피드 · 카테고리 · 검색 · 상세 카드 · PNG 저장 · 직접 입력(사진 첨부) · 콘솔 오류 0
 """
 import functools
@@ -61,7 +61,7 @@ with sync_playwright() as p:
     page.wait_for_timeout(300)
     items = page.locator('a.item')
     check('홈 피드 34종', items.count() == 34, f'{items.count()}개')
-    check('제목', '투명봉지' in page.title(), page.title())
+    check('제목', '속보이네' in page.title(), page.title())
     page.screenshot(path=str(SHOTS / f'{TAG}-01-home.png'))
 
     # 2. 카테고리 필터

@@ -1,4 +1,4 @@
-"""투명봉지 라이브 검증 — 게시판·댓글 실제 저장/표시 (390×844 · iPhone UA).
+"""속보이네 라이브 검증 — 게시판·댓글 실제 저장/표시 (390×844 · iPhone UA).
 
 실제 Supabase에 글 1건·댓글 1건을 남겨 화면에 나타나는지 확인하고,
 확인 뒤에는 스크립트가 남긴 id를 출력한다(정리는 SQL로 따로 한다).
@@ -20,7 +20,7 @@ IPHONE_UA = (
     'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 '
     '(KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1'
 )
-BASE = 'https://tumyeongbongji.vercel.app/'
+BASE = 'https://sokboine.vercel.app/'
 
 TITLE = '성분표 사진 인식이 잘 되네요'
 BODY = '매번 성분표를 직접 적기 번거로웠는데 사진으로 채워지니 편해요.'
