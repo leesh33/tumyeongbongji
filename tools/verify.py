@@ -14,7 +14,7 @@ ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / 'downloads'
 SHOTS = OUT / 'shots'
 SHOTS.mkdir(parents=True, exist_ok=True)
-CHROME = '/workspace/.cache/ms-playwright/chromium-1134/chrome-linux/chrome'
+CHROME = '/workspace/.cache/ms-playwright/chromium_headless_shell-1255/chrome-headless-shell-linux64/chrome-headless-shell'
 IPHONE_UA = (
     'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 '
     '(KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1'

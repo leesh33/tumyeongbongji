@@ -13,3 +13,13 @@ export const APP = {
   sugarGPerCube: 3,
   fatGPerSpoon: 10,
 };
+
+// 제안·제보 게시판 / 제품별 댓글 저장소 (Supabase REST).
+// 공개(publishable) 키이며, 테이블은 RLS로 anon의 SELECT·INSERT만 허용한다.
+// 이 값은 브라우저에 그대로 실려 나가는 공개 키이므로 비밀값이 아니다.
+export const SUPABASE = {
+  url: 'https://nhdzexqkibotubfovbpa.supabase.co',
+  key: 'sb_publishable_Q0Uf4DKkuZ2GenyB62j59g_udl3BwfI',
+  feedbackTable: 'tumyeongbongji_feedback',
+  commentsTable: 'tumyeongbongji_comments',
+};

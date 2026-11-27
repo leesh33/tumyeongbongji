@@ -8,7 +8,7 @@ from playwright.sync_api import sync_playwright
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / 'downloads' / 'snack-xray'
 OUT.mkdir(parents=True, exist_ok=True)
-CHROME = '/workspace/.cache/ms-playwright/chromium-1134/chrome-linux/chrome'
+CHROME = '/workspace/.cache/ms-playwright/chromium_headless_shell-1255/chrome-headless-shell-linux64/chrome-headless-shell'
 UA = ('Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 '
       '(KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1')
 BASE = sys.argv[1] if len(sys.argv) > 1 else 'https://tumyeongbongji.vercel.app/'

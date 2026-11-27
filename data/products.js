@@ -3,11 +3,12 @@
 // 34종 전부 2026-11 제조사 공식 제품정보·식약처 식품영양성분 DB·공식 판매페이지 표기로 대조했다(출처: data/nutrition-sources.md).
 // 제조사 개정에 따라 달라질 수 있다.
 // bulk는 당류·지방을 뺀 나머지 무게를 원재료 비중대로 나누기 위한 상대 비중(합은 자동 정규화).
+// short는 좁은 화면의 필터 칩에서만 쓰는 짧은 이름이다(목록 제목은 name).
 export const CATEGORIES = [
-  { key: 'snack', name: '과자', emoji: '🥨' },
-  { key: 'drink', name: '음료', emoji: '🥤' },
-  { key: 'noodle', name: '라면·간편식', emoji: '🍜' },
-  { key: 'kids', name: '아기·키즈', emoji: '🍼' },
+  { key: 'snack', name: '과자', short: '과자', emoji: '🥨' },
+  { key: 'drink', name: '음료', short: '음료', emoji: '🥤' },
+  { key: 'noodle', name: '라면·간편식', short: '라면', emoji: '🍜' },
+  { key: 'kids', name: '아기·키즈', short: '키즈', emoji: '🍼' },
 ];
 
 export const PRODUCTS = [
