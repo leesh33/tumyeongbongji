@@ -122,3 +122,52 @@
 - 코카콜라 355ml은 식약처 DB(152kcal·38g·11mg)와 업소용 실물 라벨(160kcal·40g·21mg), 국내 공식 350ml 캔(148kcal·37g·11mg)이 서로 다릅니다. 앱의 355ml 규격에 맞춰 식약처 DB 값을 썼습니다. 350ml로 바꾸려면 weight와 함께 148/11/37/37로 바꾸면 됩니다.
 - 참치마요 삼각김밥은 GS25에서 112g 규격이 여러 버전(224kcal/397mg, 217kcal/430mg, 234kcal/… )으로 유통됩니다. 2026-11 식약처 DB에 올라온 224kcal/397mg 값을 기준으로 했고, 매장 라벨이 다르면 그 표기가 우선입니다.
 - 편의점·제과점 제품은 리뉴얼 주기가 짧아 매장 라벨과 DB 값이 어긋날 수 있습니다. 카드에 보이는 값이 매장 표기와 다르면 매장 표기를 기준으로 다시 맞춰 주세요.
+
+## 2026-11-28 추가 27종 (해태 24 · 팔도 3)
+
+추가분은 **① 제조사 공식 제품정보의 원재료·중량**과 **② 식약처 K-FIND 식품영양성분 DB(100g당 함량·총 내용량)** 를 함께 대조해 넣었습니다.
+K-FIND는 값을 100g당으로 주므로 `100g당 값 × 총 내용량(g) ÷ 100`으로 총 내용량 기준 값을 환산했습니다(소수 첫째 자리 반올림).
+K-FIND 상세는 `https://various.foodsafetykorea.go.kr/nutrient/general/food/detail.do?searchFoodCd=<코드>`로 바로 열립니다.
+
+| 제품 | 총 내용량 | 열량 | 나트륨 | 당류 | 지방 | 탄수 | 단백질 | 원재료 출처 | 영양값 출처(K-FIND 코드) |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 에이스 (해태) | 121g | 653kcal | 593mg | 9.7g | 36.3g | 73.8g | 8.5g | https://ht.co.kr/product/list/detail?product=ace | P101-103000400-1024 |
+| 구운감자 (해태) | 27g | 130kcal | 210mg | 2.0g | 6.0g | 19.0g | 0.7g | https://ht.co.kr/product/list/detail?productId=50 | P101-106000100-0195 |
+| 버터링 골드 (해태) | 194g | 1034kcal | 421mg | 38.8g | 52.4g | 129.2g | 12.9g | https://ht.co.kr/product/list/detail?product=butterringgold | P101-106000100-2253 |
+| 버터링 with 에쉬레버터 (해태) | 86g | 458kcal | 187mg | 17.2g | 25.8g | 51.6g | 5.7g | https://ht.co.kr/product/list/detail?product=butterringwithechire | P101-106000100-8576 |
+| 사브레 (해태) | 252g | 1235kcal | 479mg | 70.6g | 50.4g | 181.4g | 13.4g | https://ht.co.kr/product/list/detail?product=sable | P101-103000400-2091 |
+| 크림웨하스 (해태) | 50g | 255kcal | 100mg | 14.0g | 13.0g | 32.0g | 3.0g | https://ht.co.kr/product/list/detail?productId=53 | P101-105000100-0176 |
+| 딸기웨하스 (해태) | 50g | 245kcal | 85mg | 14.0g | 11.0g | 34.0g | 3.0g | https://ht.co.kr/product/list/detail?productId=54 | P101-105000100-0031 |
+| 롤리폴리 (해태) | 62g | 295kcal | 110mg | 29.0g | 10.0g | 45.0g | 6.0g | https://ht.co.kr/product/list/detail?product=rolypoly | P103-102020500-0094 |
+| 오예스 미니 쿠키앤크림 (해태) | 192g | 927kcal | 417mg | 63.9g | 51.3g | 103.7g | 12.8g | https://ht.co.kr/product/list/detail?product=ohyesmini | P103-103020500-0112 |
+| 오예스 콜드브루 (해태) | 360g | 1800kcal | 1199mg | 119.9g | 96.1g | 204.1g | 24.0g | https://ht.co.kr/product/list/detail?product=ohyescoldbrew | P103-102020500-4402 |
+| 포키 (해태) | 46g | 225kcal | 160mg | 15.0g | 10.0g | 30.0g | 4.0g | https://ht.co.kr/product/list/detail?productId=52 | P103-102020500-0302 |
+| 포키 극세 (해태) | 44g | 225kcal | 150mg | 15.0g | 11.0g | 28.0g | 4.0g | https://ht.co.kr/product/list/detail?productId=60 | P103-102020500-0303 |
+| 칸츄리콘 (해태) | 90g | 525kcal | 720mg | 9.0g | 36.0g | 48.0g | 3.0g | https://ht.co.kr/product/list/detail?productId=67 | P101-106000100-1761 |
+| 구운양파 (해태) | 60g | 350kcal | 260mg | 3g | 23g | 33g | 3g | https://ht.co.kr/product/list/detail?productId=65 | P101-104000100-0882 |
+| 가루비감자칩 (해태) | 55g | 320kcal | 180mg | 1.0g | 21.0g | 30.0g | 3.0g | https://ht.co.kr/product/list/detail?productId=71 | P101-106000100-2673 |
+| 가루비감자칩 연어초밥맛 (해태) | 55g | 305kcal | 370mg | 3.0g | 19.0g | 31.0g | 3.0g | https://ht.co.kr/product/list/detail?productId=159 | P101-104000100-2804 |
+| 자유시간 (해태) | 36g | 172kcal | 55mg | 19.0g | 8.0g | 22.0g | 3.0g | https://ht.co.kr/product/list/detail?product=freetime | P103-101020500-0733 |
+| 자유시간 쿠키앤크림 (해태) | 30g | 135kcal | 50mg | 16.8g | 4.6g | 22.0g | 1.0g | https://ht.co.kr/product/list/detail?product=freetime-cookiescream | P103-102020500-4090 |
+| 자유시간들 (해태) | 60g | 295kcal | 95mg | 27.0g | 14.4g | 36.0g | 5.4g | https://ht.co.kr/product/list/detail?product=freetime-3-pieces | P103-102020500-4094 |
+| 썬키스트 (해태) | 125g | 521kcal | 0mg | 78.1g | 0.0g | 130.2g | 0.0g | https://ht.co.kr/product/list/detail?product=sunkist | P101-203000200-0608 |
+| 오사쯔 (해태) | 120g | 720kcal | 480mg | 20.0g | 48.0g | 68.0g | 4.0g | https://ht.co.kr/product/list/detail?product=osatsu | P101-106000100-1310 |
+| 후렌치파이 딸기 (해태) | 192g | 887kcal | 444mg | 59.1g | 38.4g | 118.1g | 10.4g | https://ht.co.kr/product/list/detail?productId=43 | P101-106000100-2005 |
+| 후렌치파이 사과 (해태) | 192g | 887kcal | 369mg | 59.1g | 34.0g | 132.9g | 10.4g | https://ht.co.kr/product/list/detail?productId=44 | P101-106000100-2006 |
+| 붕붕붕 꼬마버스 타요 (해태) | 140g | 238kcal | 147mg | 8.4g | 9.8g | 33.6g | 4.2g | https://ht.co.kr/product/list/detail?product=tayo | P101-106000100-0860 |
+| 아리 에너지드링크 레몬크레스트 (팔도) | 355ml | 10kcal | 280mg | 0g | 0g | 2g | 1g | https://paldofood.co.kr/product/beverage/203 | — |
+| 아리 에너지드링크 오렌지아워 (팔도) | 355ml | 10kcal | 280mg | 0g | 0g | 2g | 1g | https://paldofood.co.kr/product/beverage/204 | — |
+| 아리 에너지드링크 블러쉬베리 (팔도) | 355ml | 10kcal | 280mg | 0g | 0g | 2g | 1g | https://paldofood.co.kr/product/beverage/206 | — |
+
+### 추가분에서 확인한 차이·주의
+
+- **버터링 with 에쉬레버터**: 앱 표기는 K-FIND의 86g 봉지 기준입니다. 원재료·제품정보는 같은 제품의 194g 표시사항 페이지에서 가져왔습니다(원재료 동일).
+- **사브레·가루비감자칩·오사쯔**: K-FIND의 총 내용량 기준(252g·55g·120g)으로 값을 환산했고, 원재료는 제조사 페이지의 같은 제품 표시사항을 썼습니다. 제조사 페이지의 중량 표기(236g·96g·60g)와 다를 수 있습니다.
+- **구운양파**: K-FIND의 60g 봉지 기준(열량 583kcal/100g)이고, 원재료는 제조사 110g 표시사항 페이지에서 확인했습니다.
+- **포키·포키 극세**: 해태가 수입·판매하는 제품으로, 제조사 제품정보 페이지에 원재료가 함께 표기되어 있습니다.
+- **팔도 아리 에너지드링크 3종**: 팔도 공식 제품정보(355ml, 열량 10kcal·나트륨 280mg·당류 0g) 그대로이며, 세 맛의 영양성분이 동일합니다.
+
+### 이번에 넣지 못한 카테고리
+
+- **라면·간편식**: 농심·오뚜기·삼양은 공식 사이트에서 제품별 원재료명을 공개하지 않고(농심 브랜드관은 원재료 용어사전만 제공), 오뚜기·삼양·롯데칠성·광동·남양·동원은 이 환경에서 공식 사이트 접속이 막혀(인증서 만료·연결 차단) 원재료를 확인할 수 없었습니다. 원재료가 확인되지 않는 제품은 넣지 않았습니다.
+- **음료·키즈 확대**: 같은 이유로 코카콜라·롯데칠성·빙그레·매일우유·서울우유·남양은 원재료 공개 페이지가 없어 제외했습니다. 다음 차수에서 제조사 문의 또는 실물 라벨 촬영으로 원재료를 확보하면 채울 수 있습니다.

@@ -130,3 +130,49 @@ test('카테고리 이름 조회', () => {
   assert.equal(categoryName('kids'), '아기·키즈');
   assert.equal(categoryName('nope'), 'nope');
 });
+
+test('2026-11-28 추가 27종 — 식약처 K-FIND·제조사 공식 표기값', () => {
+  // 해태·팔도 공식 제품정보의 원재료 + 식약처 K-FIND 영양성분 DB(100g당)를 총 내용량으로 환산.
+  // 출처·환산 기준: data/nutrition-sources.md
+  const expected = [
+    ['ace', 121, 653, 593, 9.7, 36.3, 73.8, 8.5],
+    ['guun-gamja', 27, 130, 210, 2.0, 6.0, 19.0, 0.7],
+    ['butterring-gold', 194, 1034, 421, 38.8, 52.4, 129.2, 12.9],
+    ['butterring-esh', 86, 458, 187, 17.2, 25.8, 51.6, 5.7],
+    ['sable', 252, 1235, 479, 70.6, 50.4, 181.4, 13.4],
+    ['cream-wafer', 50, 255, 100, 14.0, 13.0, 32.0, 3.0],
+    ['strawberry-wafer', 50, 245, 85, 14.0, 11.0, 34.0, 3.0],
+    ['rolypoly', 62, 295, 110, 29.0, 10.0, 45.0, 6.0],
+    ['oyes-mini', 192, 927, 417, 63.9, 51.3, 103.7, 12.8],
+    ['oyes-coldbrew', 360, 1800, 1199, 119.9, 96.1, 204.1, 24.0],
+    ['pocky', 46, 225, 160, 15.0, 10.0, 30.0, 4.0],
+    ['pocky-thin', 44, 225, 150, 15.0, 11.0, 28.0, 4.0],
+    ['khanchuricon', 90, 525, 720, 9.0, 36.0, 48.0, 3.0],
+    ['guun-yangpa', 60, 350, 260, 3, 23, 33, 3],
+    ['garubi-original', 55, 320, 180, 1.0, 21.0, 30.0, 3.0],
+    ['garubi-salmon', 55, 305, 370, 3.0, 19.0, 31.0, 3.0],
+    ['freetime', 36, 172, 55, 19.0, 8.0, 22.0, 3.0],
+    ['freetime-cookies', 30, 135, 50, 16.8, 4.6, 22.0, 1.0],
+    ['freetime-deul', 60, 295, 95, 27.0, 14.4, 36.0, 5.4],
+    ['sunkist', 125, 521, 0, 78.1, 0.0, 130.2, 0.0],
+    ['osatsu', 120, 720, 480, 20.0, 48.0, 68.0, 4.0],
+    ['frenchpie-strawberry', 192, 887, 444, 59.1, 38.4, 118.1, 10.4],
+    ['frenchpie-apple', 192, 887, 369, 59.1, 34.0, 132.9, 10.4],
+    ['tayo', 140, 238, 147, 8.4, 9.8, 33.6, 4.2],
+    ['ari-energy-lemon', 355, 10, 280, 0, 0, 2, 1],
+    ['ari-energy-orange', 355, 10, 280, 0, 0, 2, 1],
+    ['ari-energy-berry', 355, 10, 280, 0, 0, 2, 1],
+  ];
+  assert.equal(expected.length, 27);
+  for (const [id, weight, kcal, sodium, sugar, fat, carbs, protein] of expected) {
+    const p = productById(id);
+    assert.ok(p, id);
+    assert.equal(p.weight, weight, `${id}.weight`);
+    assert.equal(p.kcal, kcal, `${id}.kcal`);
+    assert.equal(p.sodium, sodium, `${id}.sodium`);
+    assert.equal(p.sugar, sugar, `${id}.sugar`);
+    assert.equal(p.fat, fat, `${id}.fat`);
+    assert.equal(p.carbs, carbs, `${id}.carbs`);
+    assert.equal(p.protein, protein, `${id}.protein`);
+  }
+});
