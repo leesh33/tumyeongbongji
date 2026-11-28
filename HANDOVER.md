@@ -108,7 +108,7 @@
 - **왜**: Tesseract.js 기기 내 OCR은 첫 실행에 엔진+언어 모델 약 7MB를 CDN에서 받아야 하고, 앞면 제품 사진(예: "파파 ZOOS 배도라지")에서는 숫자를 못 읽어 "사진에서 숫자를 찾지 못했어요"만 떴습니다. 앞면 사진도 처리하려고 서버리스 + Vision AI로 바꿨습니다.
 - **백엔드** `api/analyze-food.js` (Vercel Node 함수, ESM 기본 export, `vercel.json`에서 `maxDuration: 30`)
   - `POST /api/analyze-food` ← `{ imageBase64, mimeType }` (data URL로 와도 됨). 응답 `{ ok:true, mode, estimated, name, brand, category, servingG, unit, kcal, sodiumMg, sugarG, fatG, carbsG, proteinG, ingredients[], note, sources[] }`.
-  - 모델 `gemini-2.5-flash`, `tools: [{ google_search: {} }]`. **`responseMimeType: "application/json"`은 grounding과 함께 쓰면 Gemini가 거절**해서 쓰지 않고, 프롬프트로 JSON만 출력하게 한 뒤 코드에서 `{...}`를 추출합니다(코드펜스·앞뒤 설명·끝 쉼표 허용). JSON이 아니면 같은 사진으로 한 번만 더 요청합니다.
+  - 모델 `gemini-3.8-flash`, `tools: [{ google_search: {} }]` (2026-11 확인: `gemini-2.5-flash`는 신규 키에 404 "no longer available to new users". 환경변수 `GEMINI_MODEL`로 교체 가능). **`responseMimeType: "application/json"`은 grounding과 함께 쓰면 Gemini가 거절**해서 쓰지 않고, 프롬프트로 JSON만 출력하게 한 뒤 코드에서 `{...}`를 추출합니다(코드펜스·앞뒤 설명·끝 쉼표 허용). JSON이 아니면 같은 사진으로 한 번만 더 요청합니다.
   - 환경변수 `GEMINI_API_KEY`(Vercel Production에 등록됨, Google AI Studio 무료 등급 `Sokboyne`). 없으면 503 `{error:"missing_api_key"}`.
   - 원본 3MB 초과 413(Vercel 요청 본문 4.5MB 한도 때문 — base64가 아니라 원본 기준), 잘못된 형식 400, IP당 분당 8회·하루 60회 429(메모리 Map, 인스턴스별 best-effort), Gemini 429는 429 `upstream_quota`, JSON 실패 502 `bad_model_output`, 25초 타임아웃 504.
   - CORS(`*`)·OPTIONS 204, 모든 응답 `Cache-Control: no-store`.

@@ -6,7 +6,8 @@
 // - 케이스 A(뒷면 성분표) / 케이스 B(앞면 제품 조회 + Google Search grounding) 모두 처리.
 
 import {
-  GEMINI_URL,
+  GEMINI_MODEL,
+  geminiUrl,
   MAX_IMAGE_MB,
   buildGeminiRequest,
   clientIp,
@@ -18,6 +19,7 @@ import {
 } from '../lib/analyze-food-core.js';
 
 const REQUEST_TIMEOUT_MS = 25_000;
+const MODEL = String(process.env.GEMINI_MODEL || GEMINI_MODEL).trim();
 const limiter = createRateLimiter({ perMinute: 8, perDay: 60 });
 
 function send(res, status, payload, extraHeaders = {}) {
@@ -69,7 +71,7 @@ async function callGemini(apiKey, requestBody) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   try {
-    const res = await fetch(GEMINI_URL, {
+    const res = await fetch(geminiUrl(MODEL), {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'x-goog-api-key': apiKey },
       body: JSON.stringify(requestBody),

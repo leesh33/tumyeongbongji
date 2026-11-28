@@ -344,7 +344,7 @@ test('성분표 사진이면 값을 채워 200으로 돌려준다', async () => 
       assert.equal(out.fatG, 4.6);
       assert.equal(out.estimated, false);
       assert.equal(res.headers['cache-control'], 'no-store');
-      assert.match(String(sent.url), /gemini-2\.5-flash:generateContent$/);
+      assert.match(String(sent.url), /gemini-3\.8-flash:generateContent$/);
       assert.equal(sent.init.headers['x-goog-api-key'], 'test-key');
     },
   );

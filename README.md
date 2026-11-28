@@ -23,7 +23,7 @@ data/products.js      제품 34종 (과자 11 · 음료 9 · 라면·간편식 7
 lib/units.js          단위 환산 (mg→국자, g→각설탕, g→스푼)
 lib/nutrition-ocr.js  성분표 OCR 텍스트 파서 (지금은 화면에 연결하지 않은 예비 파서)
 lib/analyze-food-core.js  사진 인식 요청 검증·프롬프트·Gemini 응답 파싱·IP 요청 제한 (순수)
-api/analyze-food.js   POST /api/analyze-food — Gemini Vision(gemini-2.5-flash) 서버리스 함수
+api/analyze-food.js   POST /api/analyze-food — Gemini Vision(gemini-3.8-flash) 서버리스 함수
 lib/stack.js          층 무게·비율 계산, 카테고리별 기본 원재료, 대체 간식
 lib/model.js          제품 → 카드 모델
 lib/brand-badge.js    제조사 미니 심볼(SVG) + 이름 딱지 (상표권 안전 자체 도형)
@@ -100,7 +100,7 @@ SVG 안에 `@font-face`(base64)로 심습니다(`lib/font-embed.js`). SVG를 `<i
 ## 사진 자동 인식 (Gemini Vision · `/api/analyze-food`)
 
 `#/custom`에서 사진을 고르면 **바로** 읽습니다. 사진은 브라우저에서 최대 1280px JPEG(품질 0.82, 보통 0.1~0.6MB)로
-줄여 `POST /api/analyze-food`로 보내고, Vercel 서버리스 함수가 Gemini Vision(`gemini-2.5-flash`)에 넘깁니다.
+줄여 `POST /api/analyze-food`로 보내고, Vercel 서버리스 함수가 Gemini Vision(`gemini-3.8-flash`)에 넘깁니다.
 버튼(`다시 인식하기`)으로 언제든 다시 시도할 수 있습니다.
 
 - **뒷면 성분표 사진**: 인쇄된 총 내용량·열량·나트륨·당류·지방·탄수화물·단백질·원재료를 그대로 읽어 채웁니다.
