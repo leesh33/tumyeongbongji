@@ -176,3 +176,60 @@ test('2026-11-28 추가 27종 — 식약처 K-FIND·제조사 공식 표기값',
     assert.equal(p.protein, protein, `${id}.protein`);
   }
 });
+
+test('2026-11-28 추가 31종 — 식약처 공공데이터·제조사 표기값', () => {
+  // 식약처 품목제조보고·영양성분 공공데이터(100g당 → 총 내용량 환산), 제조사 표기가 있는 라면 5종·짜요짜요는 표기값.
+  // 출처·품목제조보고번호: data/nutrition-sources.md
+  const expected = [
+    ['jin-ramyun-hot', 120, 500, 1860, 4.6, 15, 80, 11],
+    ['jin-ramyun-mild', 120, 500, 1880, 4, 15, 79, 12],
+    ['samyang-ramyun', 120, 495, 1790, 4, 16, 79, 10],
+    ['ansung-tangmyeon', 125, 525, 1790, 3, 17, 82, 11],
+    ['ojingeo-jjamppong', 124, 510, 1750, 6, 15, 84, 10],
+    ['yukgaejang-sabal', 86, 375, 1590.1, 4, 14.6, 53.3, 7],
+    ['wangttukkeong', 110, 495, 1689.6, 4, 18.7, 71.5, 9],
+    ['teumsae-red', 120, 497, 1650, 3, 14.4, 82.8, 9],
+    ['neoguri-big', 111, 515, 1589.5, 5, 21.1, 72.2, 9],
+    ['jjawang', 134, 604, 1180.5, 8, 21.4, 92.5, 10.1],
+    ['chilsung-cider', 355, 153, 7.1, 39.1, 0, 39.1, 0],
+    ['pepsi', 245, 110, 4.9, 27, 0, 27, 0],
+    ['pepsi-zero', 250, 0, 47.5, 0, 0, 0.3, 0],
+    ['sprite', 250, 120, 25, 30, 0, 30, 0.8],
+    ['fanta-orange', 355, 192, 10.7, 49.7, 0, 49.7, 0],
+    ['powerade-purple', 600, 65, 318, 16.2, 0, 16.2, 0],
+    ['vita500', 100, 50, 30, 11, 0, 12, 0],
+    ['letsbe-mild', 200, 62, 98, 13.8, 0, 13.8, 1.2],
+    ['pororo-jjajang', 65, 290, 600, 4, 11.1, 42.3, 6],
+    ['pororo-mango', 120, 130, 15.6, 15.6, 0, 33.6, 0],
+    ['yomi-yellow', 100, 50, 50, 9, 0, 14, 0],
+    ['angpang-milk', 200, 130, 100, 9, 8, 9, 6],
+    ['sangha-cheese', 18, 60, 46.1, 0, 5, 0.1, 3.1],
+    ['jjayo-strawberry', 240, 285, 210, 36, 9, 39, 12],
+    ['castard', 276, 1223, 480.2, 71.8, 71.8, 132.5, 12.1],
+    ['jollypong', 74, 330, 119.9, 22.9, 10.4, 57, 6],
+    ['mychew-strawberry', 44, 182, 10.1, 24.6, 3.9, 36.1, 0.7],
+    ['moncher', 204, 1057, 389.6, 59.2, 65.3, 102, 13.9],
+    ['kkokkalcon', 67, 391, 348.4, 3.4, 24.8, 38.2, 3.4],
+    ['sando-milkpop', 161, 808, 579.6, 58, 35.4, 112.7, 9.7],
+    ['swingchip-soy', 60, 362, 280.2, 1.4, 25.8, 28.2, 4],
+  ];
+  assert.equal(expected.length, 31);
+  for (const [id, weight, kcal, sodium, sugar, fat, carbs, protein] of expected) {
+    const p = productById(id);
+    assert.ok(p, id);
+    assert.equal(p.weight, weight, `${id}.weight`);
+    assert.equal(p.kcal, kcal, `${id}.kcal`);
+    assert.equal(p.sodium, sodium, `${id}.sodium`);
+    assert.equal(p.sugar, sugar, `${id}.sugar`);
+    assert.equal(p.fat, fat, `${id}.fat`);
+    assert.equal(p.carbs, carbs, `${id}.carbs`);
+    assert.equal(p.protein, protein, `${id}.protein`);
+  }
+});
+
+test('추가 31종은 새 아이템 번호 62~92를 이어 쓴다', () => {
+  const nums = PRODUCTS.map((p) => p.itemNo).filter((n) => typeof n === 'number');
+  assert.equal(new Set(nums).size, nums.length, '중복 아이템 번호');
+  assert.equal(Math.max(...nums), 92);
+  assert.equal(PRODUCTS.length, 92);
+});
