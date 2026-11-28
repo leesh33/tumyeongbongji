@@ -2621,7 +2621,7 @@ async function bootstrap() {
     await refreshAdminFlag();
   }
 
-  // 홈·상세에 쓸 상품 목록: DB → 실패하면 내장 34종
+  // 홈·상세에 쓸 상품 목록: DB → 실패하면 내장 목록
   await loadCatalog();
 
   route();

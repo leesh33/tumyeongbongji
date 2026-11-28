@@ -31,9 +31,11 @@ const EXPECTED = [
   '매일유업',
   '서울우유',
   '아이얌',
+  '광동제약',
+  '서흥',
 ];
 
-test('19개 제조사를 모두 덮는다', () => {
+test('21개 제조사를 모두 덮는다', () => {
   assert.equal(KNOWN_BRANDS.length, EXPECTED.length);
   for (const name of EXPECTED) assert.ok(name in BRAND_COLORS, name);
 });
