@@ -190,11 +190,11 @@ with sync_playwright() as p:
     count = page.evaluate("() => document.querySelectorAll('.feed .item').length")
     check('홈: 아이템 목록이 보인다', count >= 20, f'{count}개')
     report['results']['home_count'] = count
-    nos = page.evaluate("() => [...document.querySelectorAll('.feed .item .item-no')].slice(0,3).map(e => e.textContent.trim())")
-    check('홈: 아이템 번호(#001) 노출', len(nos) == 3 and nos[0].startswith('#'), nos)
+    nos = page.evaluate("() => [...document.querySelectorAll('.feed .item .item-no')].map(e => e.textContent.trim())")
+    check('홈: 아이템 번호(#001) 미노출', len(nos) == 0, nos[:3])
     check('홈: 390 가로 넘침 0', overflow(page) <= 0, f'{overflow(page)}px')
 
-    font = page.evaluate("() => ({ body: getComputedStyle(document.body).fontFamily, gowun: document.fonts.check('16px "Gowun Dodum"') })")
+    font = page.evaluate('() => ({ body: getComputedStyle(document.body).fontFamily, gowun: document.fonts.check(`16px "Gowun Dodum"`) })')
     report['results']['font'] = font
     check('Gowun Dodum 폰트: body에 적용', 'Gowun Dodum' in font['body'], font['body'][:60])
     check('Gowun Dodum 폰트: 실제 로드됨(document.fonts)', font['gowun'] is True, font['gowun'])
@@ -202,17 +202,24 @@ with sync_playwright() as p:
     page.fill('#q', '#004')
     page.wait_for_timeout(250)
     hits = page.evaluate("() => [...document.querySelectorAll('.feed .item b')].map(e => e.textContent.trim())")
-    check('홈: 번호(#004)로 검색된다', hits == ['쵸코하임'], hits)
+    check('홈: 번호(#004) 검색은 더 이상 결과를 내지 않는다', hits == [], hits)
+    page.fill('#q', '쵸코')
+    page.wait_for_timeout(250)
+    hits = page.evaluate("() => [...document.querySelectorAll('.feed .item b')].map(e => e.textContent.trim())")
+    check('홈: 이름(쵸코) 검색은 그대로 동작', any('쵸코' in h for h in hits), hits)
     page.fill('#q', '')
     page.wait_for_timeout(200)
 
     page.goto(f'{BASE}#/p/choco-heim', wait_until='networkidle')
     page.wait_for_timeout(400)
     detail_no = page.locator('.topbar .item-no').inner_text() if page.locator('.topbar .item-no').count() else ''
-    check('상세: 아이템 번호 표시', detail_no.strip() == '#004', detail_no)
+    check('상세: 아이템 번호 미노출', detail_no.strip() == '', detail_no)
     panel_text = page.locator('#alt-body').inner_text()
     check('상세: 링크 없는 제품은 기존 준비 중 안내', '준비 중' in panel_text, panel_text[-60:])
-    page.screenshot(path=str(OUT / f'admin-01-detail-itemno-390.png'))
+    alt_vals = page.evaluate("() => [...document.querySelectorAll('.alt-row .alt-val em')].map(e => e.textContent.trim())")
+    check('상세: 대체 간식 나트륨 표기가 나트륨 Xmg',
+          bool(alt_vals) and all(v.startswith('나트륨 ') for v in alt_vals), alt_vals[:3])
+    page.screenshot(path=str(OUT / f'admin-01-detail-itemno-hidden-390.png'))
     check('상세 390 가로 넘침 0', overflow(page) <= 0, f'{overflow(page)}px')
 
     page.goto(f'{BASE}#/admin', wait_until='networkidle')
