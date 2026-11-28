@@ -1,8 +1,9 @@
+# api/ 서버리스 함수가 ESM(package.json "type":"module")으로 해석되도록
+# package.json은 배포에 포함한다. 테스트·도구·캡처는 올리지 않는다.
 downloads/
 tools/
 test/
 node_modules/
 .vercel/
-package.json
 package-lock.json
 *.md

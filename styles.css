@@ -753,6 +753,23 @@ a {
   color: #8a3b22;
 }
 
+/* 앞면 제품명으로 찾아 채운 값 안내 */
+.ai-banner {
+  margin-top: 10px;
+  padding: 11px 13px;
+  border-radius: 12px;
+  background: #fdf3dd;
+  border: 1px solid #ecd6a6;
+  color: #7a5a1c;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.55;
+}
+
+.ai-banner[hidden] {
+  display: none;
+}
+
 .ocr-status[hidden] {
   display: none;
 }

@@ -102,3 +102,23 @@
 - **테스트**: `node --test` **172/172 통과**(admin 20, catalog 5, font-embed 9, supabase 13 추가).
 - **검증**: `tools/verify_admin.py [base_url] [tag]` — 390×844·데스크톱에서 실제 DB 34종 로드·번호 노출·번호 검색, 비관리자 차단, 관리자(세션 주입+응답 목) 3탭·폼 검증(잘못된 URL 거부·정상 URL 저장)·댓글 삭제·제보 상태 변경·삭제, 상세 링크 카드, Gowun Dodum 적용·내보내기 서브셋 요청, 가로 넘침·콘솔 오류 0. 스크린샷 `verification/tumyeongbongji/admin-*.png`.
 - **남은 확인**: 실제 관리자 구글 계정으로 로그인해 라이브에서 저장·삭제를 눌러 보는 실측(현재는 응답 목으로 검증). 로컬 검증 55/55 통과.
+
+## 2026-11-28 추가 — 사진 자동 인식을 Gemini Vision(`/api/analyze-food`)으로 교체
+
+- **왜**: Tesseract.js 기기 내 OCR은 첫 실행에 엔진+언어 모델 약 7MB를 CDN에서 받아야 하고, 앞면 제품 사진(예: "파파 ZOOS 배도라지")에서는 숫자를 못 읽어 "사진에서 숫자를 찾지 못했어요"만 떴습니다. 앞면 사진도 처리하려고 서버리스 + Vision AI로 바꿨습니다.
+- **백엔드** `api/analyze-food.js` (Vercel Node 함수, ESM 기본 export, `vercel.json`에서 `maxDuration: 30`)
+  - `POST /api/analyze-food` ← `{ imageBase64, mimeType }` (data URL로 와도 됨). 응답 `{ ok:true, mode, estimated, name, brand, category, servingG, unit, kcal, sodiumMg, sugarG, fatG, carbsG, proteinG, ingredients[], note, sources[] }`.
+  - 모델 `gemini-2.5-flash`, `tools: [{ google_search: {} }]`. **`responseMimeType: "application/json"`은 grounding과 함께 쓰면 Gemini가 거절**해서 쓰지 않고, 프롬프트로 JSON만 출력하게 한 뒤 코드에서 `{...}`를 추출합니다(코드펜스·앞뒤 설명·끝 쉼표 허용). JSON이 아니면 같은 사진으로 한 번만 더 요청합니다.
+  - 환경변수 `GEMINI_API_KEY`(Vercel Production에 등록됨, Google AI Studio 무료 등급 `Sokboyne`). 없으면 503 `{error:"missing_api_key"}`.
+  - 원본 3MB 초과 413(Vercel 요청 본문 4.5MB 한도 때문 — base64가 아니라 원본 기준), 잘못된 형식 400, IP당 분당 8회·하루 60회 429(메모리 Map, 인스턴스별 best-effort), Gemini 429는 429 `upstream_quota`, JSON 실패 502 `bad_model_output`, 25초 타임아웃 504.
+  - CORS(`*`)·OPTIONS 204, 모든 응답 `Cache-Control: no-store`.
+- **순수 로직** `lib/analyze-food-core.js`: 요청 검증(base64 패딩 계산·파일 앞머리로 형식 확인), 프롬프트, Gemini 응답 파싱, 별칭 키·단위·범위 정규화(카테고리는 앱 키 `snack/drink/noodle/kids`로 매핑 — 모델이 "ramen"이라고 답해도 `noodle`), "100ml" 같은 용량 표기에서 unit 추론, IP 요청 제한, 본문 읽기.
+- **프론트** `app.js` `#/custom`
+  - Tesseract CDN lazy-load·전처리 코드 삭제. 사진을 고르면 **바로** 실행: canvas에서 최대 1280px·JPEG 0.82(실측 0.1~0.12MB)로 줄여 POST → 1~3초.
+  - name·brand·category·중량·열량·나트륨·당류·지방·탄수화물·단백질·원재료를 채움. 사용자가 직접 적어 둔 칸은 덮어쓰지 않고, AI가 채운 칸(`.ocr-filled`)은 다시 인식하면 갱신.
+  - `mode === "product_lookup"` 또는 `estimated === true`면 `.ai-banner`에 "앞면 제품명으로 성분을 찾아 채웠어요…" + `note`(출처) 표시.
+  - 문구: 사진 버튼 "성분표나 제품 앞면을 찍으면 AI가 자동으로 숫자를 채워 드려요", 사진 아래 "사진은 성분을 읽기 위해 AI(Google Gemini)로 전송돼요…" — 옛 "기기 안에서만/어디에도 보내지 않습니다" 문구는 제거(사실과 달라짐).
+  - `lib/nutrition-ocr.js`와 그 테스트는 남겨 두었지만 화면에는 더 이상 연결되어 있지 않습니다(예비 파서).
+- **배포 설정**: `.vercelignore`에서 `package.json` 제외를 뺐습니다(빼면 `api/*.js`가 CJS로 해석되어 ESM import가 깨짐). `vercel.json`에 `functions["api/analyze-food.js"].maxDuration=30` 추가.
+- **테스트**: `node --test` **207/207 통과**(`test/analyze-food.test.js` 35개: 요청 검증·프롬프트·JSON 추출·정규화·요청 제한·핸들러 200/400/413/429/502/503/504, Gemini fetch 모킹).
+- **검증**: `tools/verify_vision.py` — 로컬(목 응답) 29/29, 390×844. 앞면 사진 → 제품명·용량·음료·원재료 + 배너, 성분표 `label-kr.png` → 75·320·100·37·4.6, 503 → 안내·다시 시도·직접 입력으로 카드 생성, Tesseract/CDN 요청 0, 가로 넘침 0, 콘솔 오류 0. 스크린샷 `verification/tumyeongbongji/vision-*.png`.
