@@ -23,7 +23,7 @@ data/products.js      제품 34종 (과자 11 · 음료 9 · 라면·간편식 7
 lib/units.js          단위 환산 (mg→국자, g→각설탕, g→스푼)
 lib/nutrition-ocr.js  성분표 OCR 텍스트 파서 (지금은 화면에 연결하지 않은 예비 파서)
 lib/analyze-food-core.js  사진 인식 요청 검증·프롬프트·Gemini 응답 파싱·IP 요청 제한 (순수)
-api/analyze-food.js   POST /api/analyze-food — Gemini Vision(gemini-3.8-flash) 서버리스 함수
+api/analyze-food.js   POST /api/analyze-food — Gemini Vision(gemini-3.5-flash) 서버리스 함수
 lib/stack.js          층 무게·비율 계산, 카테고리별 기본 원재료, 대체 간식
 lib/model.js          제품 → 카드 모델
 lib/brand-badge.js    제조사 미니 심볼(SVG) + 이름 딱지 (상표권 안전 자체 도형)
@@ -100,7 +100,7 @@ SVG 안에 `@font-face`(base64)로 심습니다(`lib/font-embed.js`). SVG를 `<i
 ## 사진 자동 인식 (Gemini Vision · `/api/analyze-food`)
 
 `#/custom`에서 사진을 고르면 **바로** 읽습니다. 사진은 브라우저에서 최대 1280px JPEG(품질 0.82, 보통 0.1~0.6MB)로
-줄여 `POST /api/analyze-food`로 보내고, Vercel 서버리스 함수가 Gemini Vision(`gemini-3.8-flash`)에 넘깁니다.
+줄여 `POST /api/analyze-food`로 보내고, Vercel 서버리스 함수가 Gemini Vision(`gemini-3.5-flash`)에 넘깁니다.
 버튼(`다시 인식하기`)으로 언제든 다시 시도할 수 있습니다.
 
 - **뒷면 성분표 사진**: 인쇄된 총 내용량·열량·나트륨·당류·지방·탄수화물·단백질·원재료를 그대로 읽어 채웁니다.
@@ -110,7 +110,7 @@ SVG 안에 `@font-face`(base64)로 심습니다(`lib/font-embed.js`). SVG를 `<i
   Google Search grounding은 Gemini **무료 등급에서 제공되지 않아**(429) 기본은 꺼 두었습니다. 유료 등급이면
   Vercel 환경변수 `GEMINI_SEARCH_GROUNDING=1`로 켤 수 있고, 켠 상태에서 거절당하면 자동으로 도구를 빼고 다시 부릅니다.
 - 값은 입력칸에만 채우고, 사용자가 직접 적어 둔 칸은 건드리지 않습니다.
-- 서버: 키는 환경변수 `GEMINI_API_KEY`, 모델은 `GEMINI_MODEL`(기본 `gemini-3.8-flash`). 없으면 503 `{error:"missing_api_key", message}`로 친절히 안내하고,
+- 서버: 키는 환경변수 `GEMINI_API_KEY`, 모델은 `GEMINI_MODEL`(기본 `gemini-3.5-flash`). 없으면 503 `{error:"missing_api_key", message}`로 친절히 안내하고,
   IP별 분당 8회·하루 60회(메모리 Map, best-effort)로 제한합니다. 사진 원본 3MB 초과는 413
   (Vercel 요청 본문 4.5MB 한도 때문에 base64 기준이 아니라 원본 기준으로 잡았습니다).
 - 키가 없거나 AI가 실패해도 **수동 입력과 카드 생성은 그대로** 동작합니다.

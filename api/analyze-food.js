@@ -21,7 +21,7 @@ import {
   validateAnalyzeRequest,
 } from '../lib/analyze-food-core.js';
 
-const REQUEST_TIMEOUT_MS = 55_000;
+const REQUEST_TIMEOUT_MS = 20_000;
 const MODEL = String(process.env.GEMINI_MODEL || GEMINI_MODEL).trim();
 const searchEnabled = () => String(process.env.GEMINI_SEARCH_GROUNDING || '').trim() === '1';
 const JSON_ONLY =
@@ -112,10 +112,20 @@ async function generate(apiKey, image, { search, extra = '', json, thinking, tim
   }
 }
 
+/** Gemini가 503(과부하)이면 0.3초 뒤 한 번만 더 부른다. */
+async function generateWithRetry(apiKey, image, opts) {
+  let gen = await generate(apiKey, image, opts);
+  if (gen.status === 500 || gen.status === 503) {
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    gen = await generate(apiKey, image, opts);
+  }
+  return gen;
+}
+
 /** 사진 한 장 → 결과. grounding 거절·JSON 실패를 각각 한 번씩만 되짚는다. */
 async function analyze(apiKey, image, opts = {}) {
   const wantSearch = searchEnabled() && !groundingBlocked;
-  let gen = await generate(apiKey, image, { ...opts, search: opts.search ?? wantSearch });
+  let gen = await generateWithRetry(apiKey, image, { ...opts, search: opts.search ?? wantSearch });
 
   if (gen.status !== 200 && wantSearch && isGroundingRefusal(gen.status, upstreamDetail(gen.payload))) {
     groundingBlocked = true;
@@ -233,22 +243,9 @@ export default async function handler(req, res) {
     return;
   }
 
-  // 진단용 스위치 (?debug=1 과 함께 쓸 때만 동작). 원인을 좁힌 뒤 지운다.
-  const url = String(req.url || '');
-  const debugOn = /[?&]debug=1\b/.test(url);
-  const flag = (k) => debugOn && new RegExp(`[?&]${k}=1\\b`).test(url);
-  const opts = {};
-  if (flag('nojson')) opts.json = false;
-  if (flag('nothink')) opts.thinking = null;
-  if (flag('tools')) opts.search = true;
-  const modelParam = /[?&]model=([\w.-]{3,40})\b/.exec(url);
-  if (debugOn && modelParam) opts.model = modelParam[1];
-  const timeoutParam = /[?&]timeout=(\d{1,5})\b/.exec(url);
-  if (timeoutParam) opts.timeoutMs = Math.min(55_000, Math.max(3000, Number(timeoutParam[1])));
-
   let out;
   try {
-    out = await analyze(apiKey, checked, opts);
+    out = await analyze(apiKey, checked);
   } catch (err) {
     if (err?.name === 'AbortError') {
       sendError(
