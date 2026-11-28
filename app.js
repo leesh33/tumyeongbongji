@@ -59,7 +59,6 @@ import { brandBadge } from './lib/brand-badge.js';
 import { cardSVG } from './lib/card-svg.js';
 import { fmt, fmtAmount, toCubes, toLadle, toSpoons } from './lib/units.js';
 import { lowSugarAlternatives } from './lib/stack.js';
-import { parseNutritionLabel } from './lib/nutrition-ocr.js';
 
 const app = document.getElementById('app');
 const toastEl = document.getElementById('toast');
@@ -612,129 +611,75 @@ function renderDetail(product) {
   bindAuthChip();
 }
 
-/* ── 성분표 사진 자동 인식 (전부 기기 안에서) ────────────
-   Tesseract.js는 사진을 올리고 자동 인식을 누른 뒤에만 CDN에서 내려받는다.
-   사진은 어디에도 업로드하지 않고 <canvas>에서 읽는다. */
-const TESSERACT_SCRIPTS = [
-  'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js',
-  'https://unpkg.com/tesseract.js@5.1.1/dist/tesseract.min.js',
-];
-const TESSERACT_OPTIONS = {
-  workerPath: 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/worker.min.js',
-  corePath: 'https://cdn.jsdelivr.net/npm/tesseract.js-core@5.1.1',
-  langPath: 'https://tessdata.projectnaptha.com/4.0.0_fast',
-};
+/* ── 사진 자동 인식 (Gemini Vision · POST /api/analyze-food) ─────────
+   고른 사진을 1280px JPEG로 줄여 서버리스 함수로 보내면, 서버가 Gemini로
+   성분표 숫자나 앞면 제품 정보를 읽어 돌려준다. 값은 입력칸에만 채운다. */
+const VISION_MAX_PX = 1280;
+const VISION_QUALITY = 0.82;
+const VISION_MAX_BASE64 = 4 * 1024 * 1024; // 원본 3MB 한도 ≈ base64 4MB
 
-let tesseractLoader = null;
-
-function loadTesseract() {
-  if (globalThis.Tesseract) return Promise.resolve(globalThis.Tesseract);
-  if (tesseractLoader) return tesseractLoader;
-  tesseractLoader = new Promise((resolve, reject) => {
-    let i = 0;
-    const next = () => {
-      if (i >= TESSERACT_SCRIPTS.length) {
-        tesseractLoader = null;
-        reject(new Error('tesseract-load-failed'));
-        return;
-      }
-      const s = document.createElement('script');
-      let done = false;
-      const giveUp = () => {
-        if (done) return;
-        done = true;
-        clearTimeout(timer);
-        s.remove();
-        next();
-      };
-      const timer = setTimeout(giveUp, 20000);
-      s.src = TESSERACT_SCRIPTS[i++];
-      s.async = true;
-      s.onload = () => {
-        if (done) return;
-        done = true;
-        clearTimeout(timer);
-        if (globalThis.Tesseract) resolve(globalThis.Tesseract);
-        else next();
-      };
-      s.onerror = giveUp;
-      document.head.appendChild(s);
-    };
-    next();
-  });
-  return tesseractLoader;
-}
-
-/** 사진 → 그레이스케일 + 대비 강화 캔버스 (오프스크린, 기기 안에서만) */
-function preprocessLabelImage(imgEl) {
+/** 사진 → 최대 1280px JPEG data URL. 투명 PNG가 검게 나오지 않게 흰 바탕을 깐다. */
+function canvasJpeg(imgEl, quality) {
   const nw = imgEl.naturalWidth || imgEl.width;
   const nh = imgEl.naturalHeight || imgEl.height;
   if (!nw || !nh) throw new Error('empty-image');
-  const wide = Math.max(nw, nh);
-  const scale = wide > 1500 ? 1500 / wide : Math.min(2, Math.max(1, 1500 / wide));
+  const scale = Math.min(1, VISION_MAX_PX / Math.max(nw, nh));
   const w = Math.max(1, Math.round(nw * scale));
   const h = Math.max(1, Math.round(nh * scale));
-
   const canvas = document.createElement('canvas');
   canvas.width = w;
   canvas.height = h;
-  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, w, h);
   ctx.drawImage(imgEl, 0, 0, w, h);
-
-  const image = ctx.getImageData(0, 0, w, h);
-  const px = image.data;
-  const count = w * h;
-  const gray = new Uint8ClampedArray(count);
-  const hist = new Uint32Array(256);
-  for (let p = 0, i = 0; p < count; p++, i += 4) {
-    const v = (px[i] * 299 + px[i + 1] * 587 + px[i + 2] * 114) / 1000;
-    gray[p] = v;
-    hist[v | 0]++;
-  }
-
-  // 위아래 2%씩 잘라 밝기 범위를 늘린다(그림자·반사 완화). 단색에 가까우면 그대로 둔다.
-  const need = count * 0.02;
-  let acc = 0;
-  let lo = 0;
-  let hi = 255;
-  for (let v = 0; v < 256; v++) {
-    acc += hist[v];
-    if (acc >= need) {
-      lo = v;
-      break;
-    }
-  }
-  acc = 0;
-  for (let v = 255; v >= 0; v--) {
-    acc += hist[v];
-    if (acc >= need) {
-      hi = v;
-      break;
-    }
-  }
-  const span = hi - lo;
-  const stretch = span >= 40;
-
-  for (let p = 0, i = 0; p < count; p++, i += 4) {
-    let v = gray[p];
-    if (stretch) v = ((v - lo) * 255) / span;
-    v = (v - 128) * 1.22 + 128;
-    px[i] = px[i + 1] = px[i + 2] = v < 0 ? 0 : v > 255 ? 255 : v;
-    px[i + 3] = 255;
-  }
-  ctx.putImageData(image, 0, 0);
-  return canvas;
+  return canvas.toDataURL('image/jpeg', quality);
 }
 
-const OCR_FIELDS = {
-  weight: { id: 'f-weight', label: '총 내용량' },
+/** /api/analyze-food 요청 바디. 너무 크면 품질을 낮춰 한 번 더 줄인다. */
+function imagePayload(imgEl) {
+  let quality = VISION_QUALITY;
+  let dataUrl = canvasJpeg(imgEl, quality);
+  while (dataUrl.length > VISION_MAX_BASE64 && quality > 0.5) {
+    quality = Math.round((quality - 0.12) * 100) / 100;
+    dataUrl = canvasJpeg(imgEl, quality);
+  }
+  return { mimeType: 'image/jpeg', imageBase64: dataUrl.slice(dataUrl.indexOf(',') + 1) };
+}
+
+/* 응답 키 → 입력칸. 값이 있는 칸만 채우고, 손대면 강조를 지운다. */
+const AI_FIELDS = {
+  name: { id: 'f-name', label: '제품 이름' },
+  brand: { id: 'f-brand', label: '브랜드' },
+  servingG: { id: 'f-weight', label: '중량' },
   kcal: { id: 'f-kcal', label: '열량' },
-  sodium: { id: 'f-sodium', label: '나트륨' },
-  sugar: { id: 'f-sugar', label: '당류' },
-  fat: { id: 'f-fat', label: '지방' },
-  carbs: { id: 'f-carbs', label: '탄수화물' },
-  protein: { id: 'f-protein', label: '단백질' },
+  sodiumMg: { id: 'f-sodium', label: '나트륨' },
+  sugarG: { id: 'f-sugar', label: '당류' },
+  fatG: { id: 'f-fat', label: '지방' },
+  carbsG: { id: 'f-carbs', label: '탄수화물' },
+  proteinG: { id: 'f-protein', label: '단백질' },
 };
+
+/** 서버 오류 → 사용자가 다음에 할 일이 보이는 문장. */
+function aiErrorText(status, data) {
+  const code = data?.error;
+  if (status === 503 || code === 'missing_api_key' || code === 'ai_unavailable') {
+    return 'AI 사진 인식을 지금 쓸 수 없어요. 아래에 직접 적어도 카드를 만들 수 있어요.';
+  }
+  if (status === 429) {
+    return data?.message || '잠깐 요청이 많았어요. 조금 뒤에 다시 시도해 주세요.';
+  }
+  if (status === 413) {
+    return '사진이 너무 커요. 다시 찍거나 3MB 이하 사진으로 올려 주세요.';
+  }
+  if (status === 400) {
+    return '사진을 읽지 못했어요. 밝은 곳에서 다시 찍어 주세요.';
+  }
+  if (status === 504) {
+    return 'AI 응답이 늦어지고 있어요. 잠시 뒤 다시 시도하거나 아래에 직접 적어 주세요.';
+  }
+  return 'AI가 사진을 읽지 못했어요. 다시 시도하거나 아래에 직접 적어 주세요.';
+}
 
 /* ── 직접 입력 ───────────────────────────────── */
 function renderCustomForm() {
@@ -749,7 +694,7 @@ function renderCustomForm() {
         <button type="button" class="photo-btn" id="photo-btn">
           <span class="big">📷</span>
           <b>성분표 사진 찍기 / 올리기</b>
-          <small>찍어 올리면 숫자를 자동으로 읽어 채워 드려요</small>
+          <small>성분표나 제품 앞면을 찍으면 AI가 자동으로 숫자를 채워 드려요</small>
         </button>
         <input type="file" id="photo-input" accept="image/*" capture="environment" class="sr-only" />
         <input type="file" id="album-input" accept="image/*" class="sr-only" />
@@ -757,11 +702,12 @@ function renderCustomForm() {
           <img id="photo-img" alt="성분표 미리보기" />
           <button type="button" class="remove" id="photo-remove" aria-label="사진 지우기">✕</button>
         </div>
-        <p class="form-note" id="photo-hint" hidden>사진은 이 기기 안에서만 읽어요. 자동 인식 프로그램은 처음 한 번만 내려받고, 사진은 어디에도 보내지 않습니다.</p>
+        <p class="form-note" id="photo-hint" hidden>사진은 성분을 읽기 위해 AI(Google Gemini)로 전송돼요. 읽은 값은 아래에서 바로 고칠 수 있고, 사진은 저장하지 않아요.</p>
         <div class="ocr-box" id="ocr-box" hidden>
-          <button type="button" class="ocr-btn" id="ocr-btn">✨ 성분표 숫자 자동으로 읽기</button>
+          <button type="button" class="ocr-btn" id="ocr-btn">✨ 사진에서 성분 자동 채우기</button>
           <p class="ocr-status" id="ocr-status" role="status" aria-live="polite" hidden></p>
         </div>
+        <div class="ai-banner" id="ai-banner" role="status" aria-live="polite" hidden></div>
         <button type="button" class="chip" id="album-btn" style="margin-top:8px">앨범에서 고르기</button>
       </div>
 
@@ -821,7 +767,7 @@ function renderCustomForm() {
         <p class="hint">적지 않으면 종류에 맞는 기본 원재료로 쌓아요.</p>
       </div>
       <button class="submit" type="submit">속보이네로 보기</button>
-      <p class="form-note">입력한 값으로만 계산해요. 저장되거나 밖으로 나가지 않습니다.</p>
+      <p class="form-note">입력한 값으로만 카드를 만들고, 어디에도 저장하지 않아요.</p>
     </form>
   `;
 
@@ -856,8 +802,10 @@ function renderCustomForm() {
       hint.hidden = false;
       ocrBox.hidden = false;
       ocrStatus.hidden = true;
+      app.querySelector('#ai-banner').hidden = true;
       ocrBtn.disabled = false;
-      ocrBtn.textContent = '✨ 성분표 숫자 자동으로 읽기';
+      ocrBtn.textContent = '✨ 사진에서 성분 자동 채우기';
+      runVision(); // 사진을 고르면 바로 읽는다. 버튼으로 다시 시도할 수 있다.
     };
     reader.readAsDataURL(file);
   };
@@ -870,46 +818,77 @@ function renderCustomForm() {
     hint.hidden = true;
     ocrBox.hidden = true;
     ocrStatus.hidden = true;
+    app.querySelector('#ai-banner').hidden = true;
     img.removeAttribute('src');
     photoInput.value = '';
     albumInput.value = '';
   });
 
   // 인식된 값은 바로 수정할 수 있게 칸에만 넣고, 손대면 강조를 지운다.
-  const fillFromOcr = (result) => {
+  const fillFromAi = (result) => {
     let filled = 0;
-    for (const [key, field] of Object.entries(OCR_FIELDS)) {
+    for (const [key, field] of Object.entries(AI_FIELDS)) {
       const value = result[key];
-      if (value == null) continue;
+      if (value == null || value === '') continue;
       const input = app.querySelector(`#${field.id}`);
       if (!input) continue;
+      // 사용자가 직접 적어 둔 칸은 건드리지 않는다(AI가 채운 칸은 새 값으로 갱신).
+      if (input.value.trim() && !input.classList.contains('ocr-filled')) continue;
       input.value = String(value);
       input.classList.add('ocr-filled');
-      input.addEventListener(
-        'input',
-        () => input.classList.remove('ocr-filled'),
-        { once: true },
-      );
+      input.addEventListener('input', () => input.classList.remove('ocr-filled'), { once: true });
       filled++;
     }
-    if (result.unit === 'ml') {
-      const cat = app.querySelector('#f-cat');
-      if (cat && cat.value === 'snack') {
-        cat.value = 'drink';
-        cat.classList.add('ocr-filled');
-        cat.addEventListener('change', () => cat.classList.remove('ocr-filled'), { once: true });
+
+    const cat = app.querySelector('#f-cat');
+    if (cat && result.category && CATEGORIES.some((c) => c.key === result.category)) {
+      cat.value = result.category;
+      cat.classList.add('ocr-filled');
+      cat.addEventListener('change', () => cat.classList.remove('ocr-filled'), { once: true });
+    } else if (cat && result.unit === 'ml' && cat.value === 'snack') {
+      cat.value = 'drink';
+      cat.classList.add('ocr-filled');
+      cat.addEventListener('change', () => cat.classList.remove('ocr-filled'), { once: true });
+    }
+
+    const ing = app.querySelector('#f-ing');
+    if (ing && Array.isArray(result.ingredients) && result.ingredients.length) {
+      if (!ing.value.trim() || ing.classList.contains('ocr-filled')) {
+        ing.value = result.ingredients.join(', ');
+        ing.classList.add('ocr-filled');
+        ing.addEventListener('input', () => ing.classList.remove('ocr-filled'), { once: true });
+        filled++;
       }
     }
     return filled;
   };
 
-  const runOcr = async () => {
+  // 앞면 제품명으로 찾아 채운 값은 포장지와 다를 수 있어서 따로 알려 준다.
+  const showAiBanner = (result) => {
+    const banner = app.querySelector('#ai-banner');
+    if (!banner) return;
+    if (result.mode !== 'product_lookup' && result.estimated !== true) {
+      banner.hidden = true;
+      return;
+    }
+    let msg =
+      result.mode === 'product_lookup'
+        ? '앞면 제품명으로 성분을 찾아 채웠어요. 실제 포장지 숫자와 다른 부분이 있으면 아래에서 바로 수정해 주세요.'
+        : '사진만으로 추정해 채운 값이 있어요. 실제 포장지 숫자와 다른 부분이 있으면 아래에서 바로 수정해 주세요.';
+    if (result.note) msg += ` 참고: ${result.note}`;
+    banner.textContent = msg;
+    banner.hidden = false;
+  };
+
+  const runVision = async () => {
     if (ocrBusy || !img.src) return;
     ocrBusy = true;
     ocrBtn.disabled = true;
-    ocrBtn.textContent = '성분표 읽는 중...';
-    setOcrStatus('성분표 읽는 중...', 'busy');
-    let last = '';
+    ocrBtn.textContent = '사진 읽는 중...';
+    app.querySelector('#ai-banner').hidden = true;
+    setOcrStatus('AI가 사진에서 성분을 찾는 중이에요... (보통 2~3초)', 'busy');
+    const started = Date.now();
+
     try {
       if (img.decode) {
         try {
@@ -918,56 +897,48 @@ function renderCustomForm() {
           /* 이미 로드된 사진이면 그냥 진행 */
         }
       }
-      const Tesseract = await loadTesseract();
-      const canvas = preprocessLabelImage(img);
-      const worker = await Tesseract.createWorker('kor+eng', 1, {
-        ...TESSERACT_OPTIONS,
-        logger: (m) => {
-          if (!m) return;
-          if (m.status === 'recognizing text') {
-            const msg = `성분표 읽는 중... ${Math.round((m.progress || 0) * 100)}%`;
-            if (msg !== last) {
-              last = msg;
-              setOcrStatus(msg, 'busy');
-            }
-          } else if (m.status === 'loading language traineddata') {
-            if (last !== 'lang') {
-              last = 'lang';
-              setOcrStatus('한국어 인식 데이터 준비 중...', 'busy');
-            }
-          }
-        },
-        errorHandler: (e) => console.warn('[ocr]', e?.message || e),
-      });
-      let text = '';
+      const payload = imagePayload(img);
+      let res;
       try {
-        const { data } = await worker.recognize(canvas);
-        text = data?.text ?? '';
-      } finally {
-        await worker.terminate().catch(() => {});
+        res = await fetch('/api/analyze-food', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+      } catch {
+        throw new Error('AI 서버에 연결하지 못했어요. 인터넷 연결을 확인하거나 아래에 직접 적어 주세요.');
       }
 
-      const result = parseNutritionLabel(text);
-      const filled = fillFromOcr(result);
+      let data = null;
+      try {
+        data = await res.json();
+      } catch {
+        data = null;
+      }
+      if (!res.ok || !data || data.ok === false) {
+        throw new Error(aiErrorText(res.status, data));
+      }
+
+      const filled = fillFromAi(data);
+      showAiBanner(data);
+      const sec = ((Date.now() - started) / 1000).toFixed(1);
       if (filled === 0) {
         setOcrStatus(
-          '사진에서 숫자를 찾지 못했어요. 밝은 곳에서 성분표만 다시 찍거나, 아래에 직접 적어 주세요.',
+          '사진에서 성분을 찾지 못했어요. 성분표가 잘 보이게 다시 찍거나, 아래에 직접 적어 주세요.',
           'error',
         );
         ocrBtn.textContent = '다시 인식하기';
       } else {
-        let msg = `${filled}개 항목을 자동으로 채웠어요. 틀린 숫자만 확인 후 카드를 만들어 보세요!`;
-        if (result.missing.length) {
-          msg += ` 못 읽은 항목(${result.missing.map((k) => OCR_FIELDS[k].label).join('·')})은 직접 채워 주세요.`;
-        }
-        if (result.unit === 'ml') msg += ' ml 표기라 종류를 음료로 바꿨어요.';
+        let msg = `${sec}초 만에 ${filled}개 항목을 채웠어요. 틀린 숫자가 없는지 확인하고 카드를 만들어 보세요!`;
+        const gaps = ['name', 'servingG', 'sodiumMg', 'fatG'].filter((k) => data[k] == null);
+        if (gaps.length) msg += ` ${gaps.map((k) => AI_FIELDS[k].label).join('·')}은(는) 직접 채워 주세요.`;
         setOcrStatus(msg, 'ok');
         ocrBtn.textContent = '다시 인식하기';
       }
     } catch (err) {
-      console.warn('[ocr] failed', err);
+      console.warn('[analyze-food] failed', err?.message || err);
       setOcrStatus(
-        '자동 인식을 불러오지 못했어요. 인터넷 연결을 확인하거나 사진을 다시 찍어 주세요. 지금도 아래에 직접 적어 카드를 만들 수 있어요.',
+        err?.message || 'AI가 사진을 읽지 못했어요. 다시 시도하거나 아래에 직접 적어 주세요.',
         'error',
       );
       ocrBtn.textContent = '다시 시도';
@@ -977,7 +948,7 @@ function renderCustomForm() {
     }
   };
 
-  ocrBtn.addEventListener('click', runOcr);
+  ocrBtn.addEventListener('click', runVision);
 
   app.querySelector('#custom-form').addEventListener('submit', (e) => {
     e.preventDefault();

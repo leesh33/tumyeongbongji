@@ -21,7 +21,9 @@ app.js                화면·라우팅·PNG 내보내기·게시판·댓글 UI
 config.js             앱 이름, 고지 문구, 환산 기준값, Supabase 공개 키 (이름 바꿀 때 여기만)
 data/products.js      제품 34종 (과자 11 · 음료 9 · 라면·간편식 7 · 아기·키즈 7)
 lib/units.js          단위 환산 (mg→국자, g→각설탕, g→스푼)
-lib/nutrition-ocr.js  성분표 OCR 텍스트 파서 (단위·%·쉼표·오인식 보정)
+lib/nutrition-ocr.js  성분표 OCR 텍스트 파서 (지금은 화면에 연결하지 않은 예비 파서)
+lib/analyze-food-core.js  사진 인식 요청 검증·프롬프트·Gemini 응답 파싱·IP 요청 제한 (순수)
+api/analyze-food.js   POST /api/analyze-food — Gemini Vision(gemini-2.5-flash) 서버리스 함수
 lib/stack.js          층 무게·비율 계산, 카테고리별 기본 원재료, 대체 간식
 lib/model.js          제품 → 카드 모델
 lib/brand-badge.js    제조사 미니 심볼(SVG) + 이름 딱지 (상표권 안전 자체 도형)
@@ -30,7 +32,7 @@ lib/text.js           글자 폭 어림·줄바꿈 (SVG에는 자동 줄바꿈�
 lib/board.js          게시판·댓글 순수 로직 (글자 수 검증, 상대 시간, 정렬)
 lib/auth.js           Supabase GoTrue 소셜 로그인(OAuth+PKCE)·세션·프로필 (fetch만 사용)
 lib/supabase.js       Supabase REST 클라이언트 (fetch만 사용, 오류→한국어 안내)
-test/*.test.js        node --test 단위 테스트 127개
+test/*.test.js        node --test 단위 테스트 (현재 207개)
 data/nutrition-sources.md  34종 영양값 대조표·출처 (2026-11)
 tools/                로컬 확인용 스크립트·스크린샷 (배포 제외)
 ```
@@ -95,13 +97,22 @@ SVG 안에 `@font-face`(base64)로 심습니다(`lib/font-embed.js`). SVG를 `<i
 - 댓글은 `Authorization: Bearer <user_access_token>`으로 저장하고, 내 댓글에만 `[삭제]`가 붙습니다(최종 판단은 RLS)
 - 적용한 SQL: `tools/migrations/2026-11-27-auth-comments.sql`
 
-## 성분표 사진 자동 인식
+## 사진 자동 인식 (Gemini Vision · `/api/analyze-food`)
 
-`#/custom`에서 사진을 찍거나 앨범에서 고르면 `성분표 숫자 자동으로 읽기` 버튼이 나옵니다.
-누르면 Tesseract.js(`kor+eng`, `4.0.0_fast`)를 CDN에서 그때 내려받아 브라우저 안에서만 인식합니다.
-사진은 서버로 보내지 않고, `<canvas>`에서 그레이스케일·대비 강화 후 읽습니다.
-인식된 총 내용량·열량·나트륨·당류·지방·탄수화물·단백질은 각 입력칸에 들어가며, 틀린 값은 바로 고칠 수 있습니다.
-오프라인이거나 CDN을 못 불러오면 안내만 띄우고 기존 수동 입력은 그대로 동작합니다.
+`#/custom`에서 사진을 고르면 **바로** 읽습니다. 사진은 브라우저에서 최대 1280px JPEG(품질 0.82, 보통 0.1~0.6MB)로
+줄여 `POST /api/analyze-food`로 보내고, Vercel 서버리스 함수가 Gemini Vision(`gemini-2.5-flash`)에 넘깁니다.
+버튼(`다시 인식하기`)으로 언제든 다시 시도할 수 있습니다.
+
+- **뒷면 성분표 사진**: 인쇄된 총 내용량·열량·나트륨·당류·지방·탄수화물·단백질·원재료를 그대로 읽어 채웁니다.
+- **앞면 제품 사진**(예: "파파 ZOOS 배도라지" 100ml 45kcal): 제품명·브랜드를 읽고 Google Search grounding으로
+  공식 영양성분을 찾아 채웁니다. 이때는 사진만으로 읽은 값이 아니므로 **추정 안내 배너**를 띄우고
+  `note`에 출처를 적습니다. 포장지 숫자와 다른 부분은 입력칸에서 바로 고칠 수 있습니다.
+- 값은 입력칸에만 채우고, 사용자가 직접 적어 둔 칸은 건드리지 않습니다.
+- 서버: 키는 환경변수 `GEMINI_API_KEY`. 없으면 503 `{error:"missing_api_key", message}`로 친절히 안내하고,
+  IP별 분당 8회·하루 60회(메모리 Map, best-effort)로 제한합니다. 사진 원본 3MB 초과는 413
+  (Vercel 요청 본문 4.5MB 한도 때문에 base64 기준이 아니라 원본 기준으로 잡았습니다).
+- 키가 없거나 AI가 실패해도 **수동 입력과 카드 생성은 그대로** 동작합니다.
+- 확인 스크립트: `tools/verify_vision.py [base_url] [tag]` (목 응답/실제 호출 둘 다).
 
 ## 아이템 번호 · 어드민(#/admin) · 대체상품 링크
 
@@ -145,13 +156,15 @@ SVG 안에 `@font-face`(base64)로 심습니다(`lib/font-embed.js`). SVG를 `<i
 
 ## 배포
 
-정적 사이트입니다. `vercel --prod`로 올리면 끝이고, `vercel.json`에 cleanUrls와 보안 헤더가 들어 있습니다.
-`downloads/`, `tools/`, `test/`, `*.md`는 `.vercelignore`로 제외됩니다.
+정적 사이트 + `/api/*` 서버리스 함수입니다. `main`에 머지하면 Vercel이 자동 배포하고, `vercel.json`에
+cleanUrls·보안 헤더·`api/analyze-food.js`의 `maxDuration: 30`이 들어 있습니다.
+`downloads/`, `tools/`, `test/`, `*.md`는 `.vercelignore`로 제외되고, `api/`가 ESM(`"type":"module"`)으로 해석되도록
+`package.json`은 배포에 포함합니다. 환경변수 `GEMINI_API_KEY`는 Vercel 프로젝트에 등록되어 있습니다.
 
 ## 데이터·표현 주의
 
 - 영양값은 각 제품의 실제 영양성분 표기값(총 내용량 기준)입니다. 34종 모두 2026-11 제조사 공식 제품정보·식약처 DB·공식 판매페이지 표기로 대조했고 출처는 `data/nutrition-sources.md`에 있습니다. 제조사 개정에 따라 실제와 다를 수 있습니다.
 - 카드에 고정 고지를 넣습니다: "본 이미지는 영양성분표를 바탕으로 환산해 구현한 참고용 이미지로,
   특정 제품의 광고나 비하 의도는 없습니다."
-- 성분표 사진은 기기 안에서만 읽고 어디에도 보내지 않습니다. 직접 입력 화면의 자동 인식은 Tesseract.js(한국어+영어)를 쓰며, 사진을 올리고 `성분표 숫자 자동으로 읽기`를 누른 뒤에만 CDN에서 내려받습니다(첫 1회 엔진+한국어·영어 모델 약 7MB, 이후 브라우저 캐시). 인식은 사용자의 기기 안에서 끝납니다.
-- 자동 인식 값은 참고값입니다. 인식된 칸은 그대로 수정할 수 있고, 오프라인이거나 인식에 실패해도 수동 입력과 카드 생성은 그대로 동작합니다.
+- 사진을 고르면 그 사진은 성분을 읽기 위해 **Google Gemini API로 전송**됩니다(최대 1280px JPEG로 줄여서). 서버는 사진을 저장하지 않고 응답을 돌려준 뒤 버립니다. 화면 안내 문구에도 이 사실을 적어 두었습니다.
+- 자동 인식 값은 참고값입니다. 인식된 칸은 그대로 수정할 수 있고, 키 미설정·AI 오류·네트워크 실패에도 수동 입력과 카드 생성은 그대로 동작합니다.
