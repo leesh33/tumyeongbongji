@@ -127,17 +127,22 @@ test('정상 사진은 base64와 mimeType을 돌려준다', () => {
 
 /* ── Gemini 요청 ─────────────────────────────────── */
 
-test('Gemini 요청에 grounding 도구와 사진, JSON 지시가 들어간다', () => {
+test('Gemini 요청에 사진과 JSON 지시가 들어간다', () => {
   const body = buildGeminiRequest({ imageBase64: PNG, mimeType: 'image/png' });
   assert.equal(body.contents[0].parts[0].inlineData.mimeType, 'image/png');
   assert.equal(body.contents[0].parts[0].inlineData.data, PNG);
-  assert.deepEqual(body.tools, [{ google_search: {} }]);
+  assert.deepEqual(body.tools, [{ google_search: {} }], '요청했을 때는 grounding 도구를 넣는다');
   const prompt = body.contents[0].parts[1].text;
   assert.match(prompt, /케이스 A/);
   assert.match(prompt, /케이스 B/);
   assert.match(prompt, /product_lookup/);
-  // grounding과 함께 쓸 수 없어서 responseMimeType은 보내지 않는다.
+  // 구조화 출력은 도구와 함께 못 쓰므로 responseMimeType은 보내지 않는다.
   assert.equal(body.generationConfig.responseMimeType, undefined);
+});
+
+test('search:false면 도구 없이 보낸다(무료 등급 기본)', () => {
+  const body = buildGeminiRequest({ imageBase64: PNG, mimeType: 'image/png' }, '', { search: false });
+  assert.equal(body.tools, undefined);
 });
 
 /* ── 응답 파싱 ───────────────────────────────────── */
@@ -377,7 +382,7 @@ test('앞면 제품 사진은 제품 조회 결과와 출처를 돌려준다', a
       assert.equal(res.json.servingG, 100);
       assert.equal(res.json.unit, 'ml');
       assert.deepEqual(res.json.sources, ['일동후디스 공식몰']);
-      assert.match(promptText, /Google 검색/);
+      assert.match(promptText, /공식 영양성분/);
     },
   );
 });
@@ -416,6 +421,7 @@ test('두 번 다 JSON이 아니면 502 bad_model_output', async () => {
 
 test('Gemini가 429를 주면 사용자에게 429 upstream_quota로 알린다', async () => {
   process.env.GEMINI_API_KEY = 'test-key';
+  delete process.env.GEMINI_SEARCH_GROUNDING;
   await withFetch(
     async () => ({ ok: false, status: 429, text: async () => '{"error":{"code":429}}' }),
     async () => {
@@ -425,6 +431,64 @@ test('Gemini가 429를 주면 사용자에게 429 upstream_quota로 알린다', 
       assert.equal(res.json.error, 'upstream_quota');
     },
   );
+});
+
+test('grounding을 켰다가 거절되면 도구를 빼고 다시 호출한다', async () => {
+  process.env.GEMINI_API_KEY = 'test-key';
+  process.env.GEMINI_SEARCH_GROUNDING = '1';
+  const bodies = [];
+  try {
+    await withFetch(
+      async (url, init) => {
+        bodies.push(JSON.parse(init.body));
+        if (bodies.length === 1) {
+          return {
+            ok: false,
+            status: 429,
+            text: async () =>
+              '{"error":{"code":429,"message":"You exceeded your current quota"}}',
+          };
+        }
+        return {
+          ok: true,
+          status: 200,
+          text: async () =>
+            JSON.stringify(geminiReply('{"mode":"product_lookup","name":"파파 ZOOS 배도라지","kcal":45}')),
+        };
+      },
+      async () => {
+        const res = fakeRes();
+        await handler(req({ body: { imageBase64: PNG, mimeType: 'image/png' }, ip: '9.9.9.2' }), res);
+        assert.equal(res.statusCode, 200, res.bodyText);
+        assert.equal(bodies.length, 2);
+        assert.ok(bodies[0].tools, '첫 호출은 grounding 포함');
+        assert.equal(bodies[1].tools, undefined, '두 번째 호출은 도구 없이');
+        assert.equal(res.json.kcal, 45);
+      },
+    );
+
+    // 한 번 거절되면 이 인스턴스에서는 처음부터 도구 없이 보낸다.
+    let calls = 0;
+    await withFetch(
+      async (url, init) => {
+        calls++;
+        assert.equal(JSON.parse(init.body).tools, undefined);
+        return {
+          ok: true,
+          status: 200,
+          text: async () => JSON.stringify(geminiReply('{"mode":"label","kcal":100}')),
+        };
+      },
+      async () => {
+        const res = fakeRes();
+        await handler(req({ body: { imageBase64: PNG, mimeType: 'image/png' }, ip: '9.9.9.1' }), res);
+        assert.equal(calls, 1);
+        assert.equal(res.statusCode, 200);
+      },
+    );
+  } finally {
+    delete process.env.GEMINI_SEARCH_GROUNDING;
+  }
 });
 
 test('IP당 분당 호출을 넘기면 429 rate_limited', async () => {
