@@ -582,7 +582,7 @@ export const PRODUCTS = [
     note: '진라면에서 매운맛을 덜어 낸 순한맛', itemNo: 63,
   },
   {
-    id: 'samyang-ramyun', name: '삼양라면', brand: '삼양', category: 'noodle', unit: 'g',
+    id: 'samyang-ramyun', name: '삼양라면', brand: '삼양식품', category: 'noodle', unit: 'g',
     weight: 120, kcal: 495, sodium: 1790, sugar: 4, fat: 16, carbs: 79, protein: 10,
     ingredients: [
       '면-소맥분(미국산,호주산)', '팜유(말레이시아산)', '전분', '정제염', '미감에스유', '글루텐', '면류첨가알칼리제(산도조절제)', '구아검', '구연산', '비타민B2', '녹차풍미유', '부대찌개베이스', '정제염', '설탕', '양념간장분',
@@ -671,7 +671,7 @@ export const PRODUCTS = [
     note: '두꺼운 면에 진한 짜장 소스', itemNo: 71,
   },
   {
-    id: 'chilsung-cider', name: '칠성사이다', brand: '롯데', category: 'drink', unit: 'ml',
+    id: 'chilsung-cider', name: '칠성사이다', brand: '롯데칠성음료', category: 'drink', unit: 'ml',
     weight: 355, kcal: 153, sodium: 7.1, sugar: 39.1, fat: 0, carbs: 39.1, protein: 0,
     ingredients: [
       '백설탕', '액상과당', '구연산(결정)', '레몬라임향', '이산화탄소', '정제수',
@@ -680,7 +680,7 @@ export const PRODUCTS = [
     note: '레몬라임 향이 톡 쏘는 탄산음료', itemNo: 72,
   },
   {
-    id: 'pepsi', name: '펩시콜라', brand: '롯데', category: 'drink', unit: 'ml',
+    id: 'pepsi', name: '펩시콜라', brand: '롯데칠성음료', category: 'drink', unit: 'ml',
     weight: 245, kcal: 110, sodium: 4.9, sugar: 27, fat: 0, carbs: 27, protein: 0,
     ingredients: [
       '정제수', '액상과당', '백설탕', '이산화탄소', '혼합제제A(카라멜색소, 정제수, 카페인(향미증진제), 합성착향료(콜라향), 프로필렌글리콜, 에탄올)', '혼합제제B(인산, 정제수, 카페인(향미증진제)',
@@ -689,7 +689,7 @@ export const PRODUCTS = [
     note: '카라멜 색과 카페인이 들어간 콜라', itemNo: 73,
   },
   {
-    id: 'pepsi-zero', name: '펩시 제로슈거', brand: '롯데', category: 'drink', unit: 'ml',
+    id: 'pepsi-zero', name: '펩시 제로슈거', brand: '롯데칠성음료', category: 'drink', unit: 'ml',
     weight: 250, kcal: 0, sodium: 47.5, sugar: 0, fat: 0, carbs: 0.3, protein: 0,
     ingredients: [
       '정제수', '이산화탄소', '혼합제제', '구연산삼나트륨', '아스파탐', '아세설팜칼륨', '수크랄로스', '구연산(무수)',
@@ -698,7 +698,7 @@ export const PRODUCTS = [
     note: '설탕 대신 감미료를 쓴 제로 콜라', itemNo: 74,
   },
   {
-    id: 'sprite', name: '스프라이트', brand: '코카콜라', category: 'drink', unit: 'ml',
+    id: 'sprite', name: '스프라이트', brand: '코카콜라음료', category: 'drink', unit: 'ml',
     weight: 250, kcal: 120, sodium: 25, sugar: 30, fat: 0, carbs: 30, protein: 0.8,
     ingredients: [
       '식품첨가물혼합제제', '음료베이스', '당시럽', '이산화탄소', '정제수',
@@ -707,7 +707,7 @@ export const PRODUCTS = [
     note: '레몬라임 향의 청량한 소다', itemNo: 75,
   },
   {
-    id: 'fanta-orange', name: '환타 오렌지', brand: '코카콜라', category: 'drink', unit: 'ml',
+    id: 'fanta-orange', name: '환타 오렌지', brand: '코카콜라음료', category: 'drink', unit: 'ml',
     weight: 355, kcal: 192, sodium: 10.7, sugar: 49.7, fat: 0, carbs: 49.7, protein: 0,
     ingredients: [
       '정제수', '액상과당', '이산화탄소', '구연산', '아라비아검', '합성착향료(오렌지향)', '자당지방에스테르', '식용색소황색제5호(합성착색료)', '프로필렌글리콜', '비타민C', '로진',
@@ -716,7 +716,7 @@ export const PRODUCTS = [
     note: '오렌지 향과 색을 넣은 과일 탄산', itemNo: 76,
   },
   {
-    id: 'powerade-purple', name: '파워에이드 퍼플스톰', brand: '코카콜라', category: 'drink', unit: 'ml',
+    id: 'powerade-purple', name: '파워에이드 퍼플스톰', brand: '코카콜라음료', category: 'drink', unit: 'ml',
     weight: 600, kcal: 65, sodium: 318, sugar: 16.2, fat: 0, carbs: 16.2, protein: 0,
     ingredients: [
       '정제수', '기타과당', '식품첨가물혼합제제', '타르색소제제', '식품첨가물혼합제제', '식품첨가물혼합제제',
@@ -735,7 +735,7 @@ export const PRODUCTS = [
     note: '비타민C를 넣은 작은 병 음료', itemNo: 78,
   },
   {
-    id: 'letsbe-mild', name: '레쓰비 마일드', brand: '롯데', category: 'drink', unit: 'ml',
+    id: 'letsbe-mild', name: '레쓰비 마일드', brand: '롯데칠성음료', category: 'drink', unit: 'ml',
     weight: 200, kcal: 62, sodium: 98, sugar: 13.8, fat: 0, carbs: 13.8, protein: 1.2,
     ingredients: [
       '정제수', '설탕', 'SMP8812', '인스턴트커피', '전지분유', '탄산수소나트륨', '합성향료', '자당지방산에스테르', '합성향료', '정제소금', '자당지방산에스테르', '아세설팜칼륨', '수크랄로스',
@@ -832,7 +832,7 @@ export const PRODUCTS = [
     note: '씹을수록 과즙이 나는 젤리', itemNo: 88,
   },
   {
-    id: 'moncher', name: '몽쉘 오리지널', brand: '롯데', category: 'snack', unit: 'g',
+    id: 'moncher', name: '몽쉘 오리지널', brand: '롯데웰푸드', category: 'snack', unit: 'g',
     weight: 204, kcal: 1057, sodium: 389.6, sugar: 59.2, fat: 65.3, carbs: 102, protein: 13.9,
     ingredients: [
       '밀가루', '준초콜릿', '식물성크림', '물엿', '산도조절제', '정제소금', '유크림', '쇼트닝', '기타설탕', '쇼트닝', '전란액', '정제수', 'D-소비톨액', '설탕', '쇼트닝', '기타가공품', '주정', '기타코코아가공품', '유청단백분말',
@@ -842,7 +842,7 @@ export const PRODUCTS = [
     note: '부드러운 크림을 초콜릿으로 감싼 케이크', itemNo: 89,
   },
   {
-    id: 'kkokkalcon', name: '꼬깔콘 고소한맛', brand: '롯데', category: 'snack', unit: 'g',
+    id: 'kkokkalcon', name: '꼬깔콘 고소한맛', brand: '롯데웰푸드', category: 'snack', unit: 'g',
     weight: 67, kcal: 391, sodium: 348.4, sugar: 3.4, fat: 24.8, carbs: 38.2, protein: 3.4,
     ingredients: [
       '옥수수', '혼합식용유', '백설탕', '정제소금', '탄산수소나트륨', '복합조미식품',
