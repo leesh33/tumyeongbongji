@@ -189,6 +189,8 @@ with sync_playwright() as p:
     check('앞면: 제품명 채움', bool(name), name)
     check('앞면: 용량·열량 채움', bool(weight) and bool(kcal), f'{weight} / {kcal}')
     check('앞면: 종류를 음료/키즈로', cat in ('drink', 'kids'), cat)
+    unit = page.eval_on_selector('#ai-unit', 'el => el.value')
+    check('앞면: 단위 ml 유지(용량 100ml)', unit == 'ml', unit)
     check('앞면: 원재료 채움', bool(ing), ing)
     check('앞면: 추정 안내 배너 표시', not banner_hidden and '앞면 제품명' in banner_text, banner_text[:80])
     page.screenshot(path=str(OUT / f'vision-{TAG}-2-front.png'))

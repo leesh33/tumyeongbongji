@@ -118,7 +118,7 @@
 - **순수 로직** `lib/analyze-food-core.js`: 요청 검증(base64 패딩 계산·파일 앞머리로 형식 확인), 프롬프트, Gemini 응답 파싱, 별칭 키·단위·범위 정규화(카테고리는 앱 키 `snack/drink/noodle/kids`로 매핑 — 모델이 "ramen"이라고 답해도 `noodle`), "100ml" 같은 용량 표기에서 unit 추론, IP 요청 제한, 본문 읽기.
 - **프론트** `app.js` `#/custom`
   - Tesseract CDN lazy-load·전처리 코드 삭제. 사진을 고르면 **바로** 실행: canvas에서 최대 1280px·JPEG 0.82(실측 0.1~0.12MB)로 줄여 POST → 1~3초.
-  - name·brand·category·중량·열량·나트륨·당류·지방·탄수화물·단백질·원재료를 채움. 사용자가 직접 적어 둔 칸은 덮어쓰지 않고, AI가 채운 칸(`.ocr-filled`)은 다시 인식하면 갱신.
+  - name·brand·category·중량·열량·나트륨·당류·지방·탄수화물·단백질·원재료를 채움. AI가 알려 준 단위(ml/g)는 숨은 입력 `#ai-unit`에 두어, 100ml 키즈 음료가 카드에서 "100g"으로 나오지 않게 했습니다. 사용자가 직접 적어 둔 칸은 덮어쓰지 않고, AI가 채운 칸(`.ocr-filled`)은 다시 인식하면 갱신.
   - `mode === "product_lookup"` 또는 `estimated === true`면 `.ai-banner`에 "앞면 제품명으로 성분을 찾아 채웠어요…" + `note`(출처) 표시.
   - 문구: 사진 버튼 "성분표나 제품 앞면을 찍으면 AI가 자동으로 숫자를 채워 드려요", 사진 아래 "사진은 성분을 읽기 위해 AI(Google Gemini)로 전송돼요…" — 옛 "기기 안에서만/어디에도 보내지 않습니다" 문구는 제거(사실과 달라짐).
   - `lib/nutrition-ocr.js`와 그 테스트는 남겨 두었지만 화면에는 더 이상 연결되어 있지 않습니다(예비 파서).

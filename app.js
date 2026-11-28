@@ -766,6 +766,7 @@ function renderCustomForm() {
         <textarea id="f-ing" name="ingredients" rows="2" placeholder="예: 옥수수, 설탕, 팜유, 정제소금"></textarea>
         <p class="hint">적지 않으면 종류에 맞는 기본 원재료로 쌓아요.</p>
       </div>
+      <input type="hidden" id="ai-unit" name="unit" value="" />
       <button class="submit" type="submit">속보이네로 보기</button>
       <p class="form-note">입력한 값으로만 카드를 만들고, 어디에도 저장하지 않아요.</p>
     </form>
@@ -819,6 +820,7 @@ function renderCustomForm() {
     ocrBox.hidden = true;
     ocrStatus.hidden = true;
     app.querySelector('#ai-banner').hidden = true;
+    app.querySelector('#ai-unit').value = '';
     img.removeAttribute('src');
     photoInput.value = '';
     albumInput.value = '';
@@ -838,6 +840,12 @@ function renderCustomForm() {
       input.classList.add('ocr-filled');
       input.addEventListener('input', () => input.classList.remove('ocr-filled'), { once: true });
       filled++;
+    }
+
+    // ml 제품(음료·키즈 음료)이 g으로 표시되지 않게 단위를 기억해 둔다.
+    if (result.unit === 'ml' || result.unit === 'g') {
+      const unitInput = app.querySelector('#ai-unit');
+      if (unitInput) unitInput.value = result.unit;
     }
 
     const cat = app.querySelector('#f-cat');
@@ -972,7 +980,7 @@ function renderCustomForm() {
       name,
       brand: f.brand.value.trim(),
       category: f.category.value,
-      unit: f.category.value === 'drink' ? 'ml' : 'g',
+      unit: f.unit.value === 'ml' || f.category.value === 'drink' ? 'ml' : 'g',
       weight,
       kcal: Number.isFinite(kcalRaw) ? kcalRaw : null,
       sodium,
