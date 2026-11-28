@@ -48,9 +48,16 @@ test('색상은 모두 유효한 hex이고 서로 겹치지 않는다', () => {
 
 test('카탈로그의 모든 제품 브랜드가 전용 심볼을 갖는다', () => {
   for (const p of PRODUCTS) {
-    assert.ok(p.brand in BRAND_COLORS, `${p.id}: ${p.brand}`);
-    assert.equal(brandStyle(p.brand).known, true, p.brand);
+    assert.equal(brandStyle(p.brand).known, true, `${p.id}: ${p.brand}`);
   }
+});
+
+test('법인명이 붙은 브랜드는 같은 제조사 심볼을 쓴다', () => {
+  assert.equal(brandStyle('삼양식품').color, BRAND_COLORS['삼양']);
+  assert.equal(brandStyle('롯데칠성음료').color, BRAND_COLORS['롯데']);
+  assert.equal(brandStyle('롯데웰푸드').color, BRAND_COLORS['롯데']);
+  assert.equal(brandStyle('코카콜라음료').color, BRAND_COLORS['코카콜라']);
+  assert.equal(brandStyle('없는회사').known, false);
 });
 
 test('심볼은 16×16 원형 SVG이고 브랜드 색을 쓴다', () => {
