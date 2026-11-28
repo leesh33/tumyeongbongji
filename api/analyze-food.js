@@ -1,4 +1,4 @@
-// POST /api/analyze-food — 사진 한 장을 Gemini Vision(gemini-2.5-flash)에 보내
+// POST /api/analyze-food — 사진 한 장을 Gemini Vision(gemini-3.8-flash)에 보내
 // 영양성분을 읽어 JSON으로 돌려주는 Vercel 서버리스 함수.
 //
 // - 외부 npm 패키지 없이 내장 fetch만 쓴다.
