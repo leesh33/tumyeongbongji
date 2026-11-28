@@ -31,8 +31,8 @@ function send(res, status, payload, extraHeaders = {}) {
   res.end(JSON.stringify(payload));
 }
 
-function sendError(res, status, error, message, extraHeaders) {
-  send(res, status, { ok: false, error, message }, extraHeaders);
+function sendError(res, status, error, message, extraHeaders, extra = {}) {
+  send(res, status, { ok: false, error, message, ...extra }, extraHeaders);
 }
 
 /** Gemini 오류 응답을 사용자에게 보여 줄 한국어로 바꾼다. */
@@ -106,8 +106,12 @@ async function analyze(apiKey, image) {
 
     if (status !== 200) {
       const mapped = mapUpstreamError(status);
-      console.warn('[analyze-food] gemini', status, (raw || '').slice(0, 300));
-      return { ok: false, ...mapped };
+      console.warn('[analyze-food] gemini', status, (raw || '').slice(0, 500));
+      return {
+        ok: false,
+        ...mapped,
+        upstream: { status, message: String(payload?.error?.message || '').slice(0, 300) },
+      };
     }
 
     const parsed = parseGeminiResponse(payload);
@@ -214,7 +218,12 @@ export default async function handler(req, res) {
   }
 
   if (!out.ok) {
-    sendError(res, out.status, out.error, out.message);
+    // 원인 확인용: ?debug=1일 때만 Gemini가 준 오류 문장을 함께 돌려준다(키는 포함되지 않는다).
+    const debug = /[?&]debug=1\b/.test(String(req.url || ''));
+    const extra = out.upstream
+      ? { upstreamStatus: out.upstream.status, ...(debug ? { upstreamMessage: out.upstream.message } : {}) }
+      : {};
+    sendError(res, out.status, out.error, out.message, undefined, extra);
     return;
   }
 
