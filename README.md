@@ -60,10 +60,13 @@ node --test
 
 ## 폰트
 
-화면 글꼴은 **고운돋움(Gowun Dodum)** 입니다(`index.html`의 Google Fonts + `styles.css`의 `body` font-family).
-카드 SVG도 `Gowun Dodum`을 먼저 쓰고, PNG로 내보낼 때는 카드에 나온 글자만 담은 Google Fonts 서브셋을 받아
+화면 글꼴은 **페이퍼로지(Paperlogy)** 입니다. 외부 CDN 대신 `fonts/`에 둔 woff2(400·500·600·700·800)를
+`styles.css`의 `@font-face`로 직접 서빙하고, `body`는 `font-family: 'Paperlogy', ...`입니다(`index.html`은 400만 preload).
+각 파일은 한글 완성형 11,172자와 숫자·영문·문장부호(`·`, `%`, `kcal`, `mg`, `g`)를 담고 있고,
+`python3 tools/check_glyphs.py`로 앱이 쓰는 글자(803자)에 빠진 글리프가 없는지 확인합니다.
+카드 SVG도 `Paperlogy`를 먼저 쓰고, PNG로 내보낼 때는 카드가 실제로 쓴 굵기의 woff2를
 SVG 안에 `@font-face`(base64)로 심습니다(`lib/font-embed.js`). SVG를 `<img>`로 그리면 문서 폰트를 쓰지 못해
-기본 글꼴로 떨어지기 때문입니다.
+기본 글꼴로 떨어지기 때문입니다. 폰트 라이선스는 SIL OFL 1.1(`fonts/OFL.txt`).
 
 ## 제안·제보 게시판 · 제품별 댓글
 

@@ -194,10 +194,10 @@ with sync_playwright() as p:
     check('홈: 아이템 번호(#001) 미노출', len(nos) == 0, nos[:3])
     check('홈: 390 가로 넘침 0', overflow(page) <= 0, f'{overflow(page)}px')
 
-    font = page.evaluate('() => ({ body: getComputedStyle(document.body).fontFamily, gowun: document.fonts.check(`16px "Gowun Dodum"`) })')
+    font = page.evaluate('() => ({ body: getComputedStyle(document.body).fontFamily, paperlogy: document.fonts.check(`16px "Paperlogy"`) })')
     report['results']['font'] = font
-    check('Gowun Dodum 폰트: body에 적용', 'Gowun Dodum' in font['body'], font['body'][:60])
-    check('Gowun Dodum 폰트: 실제 로드됨(document.fonts)', font['gowun'] is True, font['gowun'])
+    check('Paperlogy 폰트: body에 적용', 'Paperlogy' in font['body'], font['body'][:60])
+    check('Paperlogy 폰트: 실제 로드됨(document.fonts)', font['paperlogy'] is True, font['paperlogy'])
 
     page.fill('#q', '#004')
     page.wait_for_timeout(250)
@@ -384,17 +384,19 @@ with sync_playwright() as p:
 
     font_requests = []
     page.on('request', lambda r: font_requests.append(r.url)
-            if 'fonts.googleapis.com' in r.url or 'fonts.gstatic.com' in r.url else None)
+            if '/fonts/Paperlogy-' in r.url or 'fonts.googleapis.com' in r.url or 'fonts.gstatic.com' in r.url else None)
     try:
         with page.expect_download(timeout=15000) as dl:
             page.locator('#save').click()
         download = dl.value
         check('PNG 내보내기: 파일 생성', download.suggested_filename.endswith('.png'), download.suggested_filename)
         page.wait_for_timeout(800)
-        subset = [u for u in font_requests if 'css2' in u and 'text=' in u]
-        check('PNG 내보내기: Gowun Dodum 서브셋 폰트 요청', len(subset) >= 1, (subset[0][:110] if subset else 'none'))
-        check('PNG 내보내기: 폰트 파일(woff2) 요청',
-              any('fonts.gstatic.com' in u for u in font_requests), len(font_requests))
+        local_fonts = [u for u in font_requests if '/fonts/Paperlogy-' in u]
+        check('PNG 내보내기: 저장소 폰트(fonts/Paperlogy-*) 요청', len(local_fonts) >= 1,
+              (local_fonts[0].rsplit('/', 1)[-1] if local_fonts else 'none'))
+        check('PNG 내보내기: 외부(구글) 폰트 요청 없음',
+              not any('fonts.googleapis.com' in u or 'fonts.gstatic.com' in u for u in font_requests),
+              len(font_requests))
     except Exception as err:  # noqa: BLE001
         check('PNG 내보내기: 파일 생성', False, str(err)[:120])
 

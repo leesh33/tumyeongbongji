@@ -98,9 +98,9 @@
   - 홈·검색: 목록에 `#001` 번호 칩, 검색창에서 번호로도 찾기. 상세: 상단에 아이템 번호, `저당·대체 간식` 아래에 대체상품 링크 카드 + "제휴 링크가 포함될 수 있어요" 안내(링크가 없으면 기존 준비 중 문구).
   - `#/admin`: 3탭(아이템·성분 / 댓글 / 제안·제보). 아이템 폼에서 번호·성분·원재료·노출 여부·대체상품 링크(행 추가/삭제, 플랫폼 선택, URL, 메모)를 고치고 저장하면 DB 반영 + 앱 목록 즉시 갱신. 관리자가 아니면 관리자 이메일 안내 + 로그인/홈 버튼.
   - 헤더 기어 버튼·프로필 시트의 `어드민 관리`는 `tb_is_admin()`이 true일 때만 보인다.
-- **폰트**: 고운돋움(Gowun Dodum) 적용(`index.html` Google Fonts, `styles.css` body). 카드 SVG도 Gowun Dodum, PNG 내보내기는 카드 글자만 담은 서브셋 woff2를 data URI `@font-face`로 심어 내보낸다(`lib/font-embed.js`) — SVG를 `<img>`로 그리면 문서 폰트가 전달되지 않기 때문.
-- **테스트**: `node --test` **172/172 통과**(admin 20, catalog 5, font-embed 9, supabase 13 추가).
-- **검증**: `tools/verify_admin.py [base_url] [tag]` — 390×844·데스크톱에서 실제 DB 34종 로드·번호 노출·번호 검색, 비관리자 차단, 관리자(세션 주입+응답 목) 3탭·폼 검증(잘못된 URL 거부·정상 URL 저장)·댓글 삭제·제보 상태 변경·삭제, 상세 링크 카드, Gowun Dodum 적용·내보내기 서브셋 요청, 가로 넘침·콘솔 오류 0. 스크린샷 `verification/tumyeongbongji/admin-*.png`.
+- **폰트**: 페이퍼로지(Paperlogy) 적용 — `fonts/`에 둔 woff2 5굵기(400·500·600·700·800)를 `styles.css`의 `@font-face`로 서빙하고 `body`는 `'Paperlogy'` 먼저(구글 폰트 링크 없음, `index.html`은 400 preload). 카드 SVG도 Paperlogy, PNG 내보내기는 카드가 쓴 굵기의 woff2를 그대로 base64 `@font-face`로 심는다(`lib/font-embed.js`) — SVG를 `<img>`로 그리면 문서 폰트가 전달되지 않기 때문. 글리프 확인은 `tools/check_glyphs.py`(한글 11,172자 전부 + `·`·`%`·`kcal`·`mg`·`g`).
+- **테스트**: `node --test` **210/210 통과**(admin 20, catalog 5, font-embed 10, supabase 13 포함).
+- **검증**: `tools/verify_font.py [base_url] [tag]` — 390×844로 화면 글꼴·굵기별 로드·구글 폰트 요청 0·글리프 샘플·카드 SVG 글꼴·PNG 내보내기(저장소 폰트 요청 + 폰트 심은/안 심은 렌더 픽셀 비교). 전체 검증은 `tools/verify_admin.py [base_url] [tag]` — 실제 DB 34종 로드·번호 미노출·이름 검색, 비관리자 차단, 관리자(세션 주입+응답 목) 3탭·폼 검증(잘못된 URL 거부·정상 URL 저장)·댓글 삭제·제보 상태 변경·삭제, 상세 링크 카드, Paperlogy 적용·저장소 폰트 요청, 가로 넘침·콘솔 오류 0. 스크린샷 `verification/tumyeongbongji/admin-*.png`.
 - **남은 확인**: 실제 관리자 구글 계정으로 로그인해 라이브에서 저장·삭제를 눌러 보는 실측(현재는 응답 목으로 검증). 로컬 검증 55/55 통과.
 
 ## 2026-11-28 추가 — 사진 자동 인식을 Gemini Vision(`/api/analyze-food`)으로 교체
@@ -133,3 +133,12 @@
 - 그 밖에 문구·가로 넘침 0·콘솔 오류 0·Tesseract/CDN 요청 0 확인. 캡처 `verification/tumyeongbongji/vision-live-*.png`, 기록 `vision-live.json`(22개 중 21개 PASS — 남은 1개는 검증 스크립트가 종류를 `drink`로만 기대했는데 실제 응답은 `kids`였던 것. 키즈 음료라 `kids`가 맞아 스크립트를 `drink|kids`로 고쳤습니다).
 - **한도 주의**: 무료 등급 키라 분당 5회·하루 20회 수준입니다. 앱 서버 제한(IP당 분당 8·하루 60)보다 Gemini 쪽 한도가 먼저 걸리면 429 `upstream_quota` → "지금은 AI 사진 인식을 쓸 수 없어요(요청 한도)" 안내와 함께 직접 입력으로 넘어갑니다. 공개 앱으로 오래 쓰려면 결제 연결이 필요합니다.
 - Google Search grounding은 무료 등급에서 안 되므로(429) 기본은 모델 지식으로 채우고 추정 배너로 알립니다. 유료 등급이면 `GEMINI_SEARCH_GROUNDING=1`.
+
+## 2026-11-28 추가 — 폰트를 페이퍼로지(Paperlogy)로 교체
+
+- **왜**: 화면·카드 글꼴을 고운돋움에서 **페이퍼로지**로 바꿔 달라는 요청. 고운돋움은 굵기가 400 하나뿐이라 700·800 제목이 브라우저 합성 굵기였는데, 페이퍼로지는 9굵기(OFL)라 400·500·600·700·800이 실제 굵기로 나옵니다.
+- **서빙**: `fonts/Paperlogy-{4Regular,5Medium,6SemiBold,7Bold,8ExtraBold}.woff2`(각 159~165KB, 한글 11,172자)를 저장소에 두고 `styles.css`의 `@font-face` 5개로 직접 서빙. `index.html`의 구글 폰트 링크·preconnect는 지우고 400만 `preload`합니다(굵기는 화면에 쓰인 것만 내려받음). 라이선스 전문은 `fonts/OFL.txt`, 출처는 `fonts/README.md`.
+- **카드 PNG**: `lib/card-svg.js`의 FONT가 `'Paperlogy'` 먼저. `lib/font-embed.js`는 카드 SVG의 `<text font-weight>`를 읽어 **쓰인 굵기의 `fonts/*.woff2`만** base64 `@font-face`로 심습니다(외부 CDN 요청 없음, 굵기 하나 약 160KB). 없는 굵기(900 등)는 가장 가까운 파일로 붙습니다. `app.js`는 커진 SVG를 `data:` 대신 **blob URL**로 `<img>`에 넘깁니다(모바일 Safari의 data URL 길이 제한 회피).
+- **글리프**: `python3 tools/check_glyphs.py` — 앱 코드·데이터의 803자(한글·영문·숫자·`·`·`%`·`kcal`·`mg`·`g`·`㎎` 등)가 5굵기 모두에 있고 누락 0. 이모지·그림문자 24자만 대체 글꼴.
+- **테스트**: `node --test` **210/210 통과**. `test/font-embed.test.js`는 굵기 수집·가장 가까운 파일 선택·굵기별 @font-face·캐시·부분 실패 시 나머지 유지·실패 시 원본 반환을 확인.
+- **검증**: `tools/verify_font.py [base_url] [tag]` 16/16 — 390×844에서 body·400/700/800 로드, 구글 폰트 요청 0, 글리프 샘플, 카드 SVG 폰트·폭 넘침 0, 카드 렌더 픽셀 비교(폰트 심은 그림 vs 안 심은 그림 15,271px 차이 = 실제로 글꼴이 그려짐), PNG 내보내기에서 저장소 폰트 요청 + 파일 저장. 스크린샷 `verification/tumyeongbongji/*paperlogy*.png`.

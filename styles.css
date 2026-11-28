@@ -1,3 +1,45 @@
+/* 페이퍼로지(Paperlogy) — fonts/에 있는 woff2를 그대로 서빙한다(OFL 1.1).
+   굵기마다 파일이 따로 있어 브라우저는 화면에 실제로 쓰인 굵기만 내려받는다. */
+@font-face {
+  font-family: 'Paperlogy';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('fonts/Paperlogy-4Regular.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Paperlogy';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('fonts/Paperlogy-5Medium.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Paperlogy';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('fonts/Paperlogy-6SemiBold.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Paperlogy';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('fonts/Paperlogy-7Bold.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Paperlogy';
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url('fonts/Paperlogy-8ExtraBold.woff2') format('woff2');
+}
+
 :root {
   --kraft: #e8ddd0;
   --kraft-2: #f1e8dc;
@@ -33,7 +75,7 @@ body {
     radial-gradient(120% 70% at 50% -10%, #f6efe6 0%, rgba(246, 239, 230, 0) 60%),
     var(--kraft);
   color: var(--ink);
-  font-family: 'Gowun Dodum', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR',
+  font-family: 'Paperlogy', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR',
     sans-serif;
   -webkit-font-smoothing: antialiased;
   font-size: 15px;
