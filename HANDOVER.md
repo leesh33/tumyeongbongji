@@ -155,3 +155,5 @@
 - **DB**: `tools/migrations/2026-11-28-products-31.sql` (item_no 62~92, `on conflict (id) do nothing`, 시퀀스 setval). Supabase 프로젝트 `nhdzexqkibotubfovbpa`의 `tumyeongbongji_products`에 적용하며, 다른 테이블(꼬리핀 포함)은 건드리지 않습니다.
 - **제조사 심볼**: 새로 들어온 `광동제약`·`서흥` 두 곳의 미니 심볼을 `lib/brand-badge.js`에 추가했습니다(브랜드 색 21종). `삼양식품`·`롯데칠성음료`·`롯데웰푸드`·`코카콜라음료`는 기존 표기(`삼양`·`롯데`·`코카콜라`)로 맞췄습니다.
 - **테스트**: `node --test` **212/212 통과**(31종 회귀 테스트, 아이템 번호 62~92 연속성 테스트 추가).
+- **라이브 반영·검증**: PR #19·#20·#21 머지 → Vercel 자동배포. Supabase DB 92종 적용(62~92, 다른 테이블 무접촉).
+  `tools/verify_products31.py https://sokboyne.vercel.app/ live` → **27/27 PASS** (홈 92개, 카테고리 41·20·17·14, 새 제품 상세 8종의 열량·나트륨 표기, 가로 넘침 0, 콘솔·페이지 오류 0). 캡처 `verification/tumyeongbongji/products31-*.png`, 기록 `products31-live.json`.
