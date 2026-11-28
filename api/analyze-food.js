@@ -88,15 +88,15 @@ function isGroundingRefusal(status, message) {
   return status === 400 && /grounding|google_search|tool/i.test(message);
 }
 
-async function generate(apiKey, image, { search, extra = '' }) {
+async function generate(apiKey, image, { search, extra = '', json, thinking, timeoutMs = REQUEST_TIMEOUT_MS }) {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
   const started = Date.now();
   try {
     const res = await fetch(geminiUrl(MODEL), {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'x-goog-api-key': apiKey },
-      body: JSON.stringify(buildGeminiRequest(image, extra, { search })),
+      body: JSON.stringify(buildGeminiRequest(image, extra, { search, json, thinking })),
       signal: controller.signal,
     });
     const text = await res.text();
@@ -113,14 +113,14 @@ async function generate(apiKey, image, { search, extra = '' }) {
 }
 
 /** 사진 한 장 → 결과. grounding 거절·JSON 실패를 각각 한 번씩만 되짚는다. */
-async function analyze(apiKey, image) {
+async function analyze(apiKey, image, opts = {}) {
   const wantSearch = searchEnabled() && !groundingBlocked;
-  let gen = await generate(apiKey, image, { search: wantSearch });
+  let gen = await generate(apiKey, image, { ...opts, search: opts.search ?? wantSearch });
 
   if (gen.status !== 200 && wantSearch && isGroundingRefusal(gen.status, upstreamDetail(gen.payload))) {
     groundingBlocked = true;
     console.warn('[analyze-food] search grounding refused, retry without tools:', gen.status, upstreamDetail(gen.payload));
-    gen = await generate(apiKey, image, { search: false });
+    gen = await generate(apiKey, image, { ...opts, search: false });
   }
 
   if (gen.status !== 200) {
@@ -136,7 +136,11 @@ async function analyze(apiKey, image) {
   let result = parseAiOutput(parsed.text);
 
   if (!result) {
-    const again = await generate(apiKey, image, { search: searchEnabled() && !groundingBlocked, extra: JSON_ONLY });
+    const again = await generate(apiKey, image, {
+      ...opts,
+      search: opts.search ?? (searchEnabled() && !groundingBlocked),
+      extra: JSON_ONLY,
+    });
     if (again.status === 200) {
       const retried = parseGeminiResponse(again.payload);
       result = parseAiOutput(retried.text);
@@ -229,9 +233,19 @@ export default async function handler(req, res) {
     return;
   }
 
+  // 진단용 스위치 (?debug=1 과 함께 쓸 때만 동작). 원인을 좁힌 뒤 지운다.
+  const url = String(req.url || '');
+  const flag = (k) => new RegExp(`[?&]${k}=1\\b`).test(url) && /[?&]debug=1\b/.test(url);
+  const opts = {};
+  if (flag('nojson')) opts.json = false;
+  if (flag('nothink')) opts.thinking = null;
+  if (flag('tools')) opts.search = true;
+  const timeoutParam = /[?&]timeout=(\d{1,5})\b/.exec(url);
+  if (timeoutParam) opts.timeoutMs = Math.min(55_000, Math.max(3000, Number(timeoutParam[1])));
+
   let out;
   try {
-    out = await analyze(apiKey, checked);
+    out = await analyze(apiKey, checked, opts);
   } catch (err) {
     if (err?.name === 'AbortError') {
       sendError(
