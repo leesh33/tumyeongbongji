@@ -27,7 +27,7 @@ DETAILS = [
     # id, 이름, 열량 표기, 나트륨 표기
     ('jin-ramyun-hot', '진라면 매운맛', '500 kcal', '1860 mg'),
     ('samyang-ramyun', '삼양라면', '495 kcal', '1790 mg'),
-    ('wangttukkeong', '왕뚜껑', '495 kcal', '1690 mg'),
+    ('wangttukkeong', '왕뚜껑', '495 kcal', '1689.6 mg'),
     ('chilsung-cider', '칠성사이다', '153 kcal', '7.1 mg'),
     ('pepsi-zero', '펩시 제로슈거', '0 kcal', '47.5 mg'),
     ('jjayo-strawberry', '짜요짜요 딸기', '285 kcal', '210 mg'),
