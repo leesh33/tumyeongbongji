@@ -408,7 +408,7 @@ function renderHomeFeed() {
           <em>${fmtAmount(p.weight)}${p.unit} · ${p.kcal} kcal</em>
         </span>
         <span class="mini">
-          <i class="${Number(sodium) >= 2 ? 'hot' : ''}">나 ${sodium}국자</i>
+          <i class="${Number(sodium) >= 2 ? 'hot' : ''}">나트륨 ${sodium}국자</i>
           <i class="${Number(sugar) >= 6 ? 'hot' : ''}">당 ${sugar}개</i>
         </span>
       </a></li>`;
