@@ -248,6 +248,18 @@ test('목록 검색: 이름·제조사·원재료·번호로 찾는다', () => {
   assert.equal(matchesProductQuery(product, ''), true);
 });
 
+test('고객용 검색: 번호를 빼면 이름·제조사·원재료로만 찾는다', () => {
+  const product = { itemNo: 4, name: '쵸코하임', brand: '크라운', ingredients: ['헤이즐넛페이스트'] };
+  const opts = { includeItemNo: false };
+  assert.equal(matchesProductQuery(product, '쵸코', opts), true);
+  assert.equal(matchesProductQuery(product, '크라운', opts), true);
+  assert.equal(matchesProductQuery(product, '헤이즐넛', opts), true);
+  assert.equal(matchesProductQuery(product, '#004', opts), false);
+  assert.equal(matchesProductQuery(product, '4', opts), false);
+  assert.equal(matchesProductQuery(product, '012', opts), false);
+  assert.equal(matchesProductQuery(product, '', opts), true);
+});
+
 test('플랫폼 목록은 쿠팡·네이버 쇼핑·기타', () => {
   assert.deepEqual(
     ALT_PLATFORMS.map((p) => p.key),

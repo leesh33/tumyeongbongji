@@ -498,7 +498,7 @@ a {
 }
 
 .alt-name {
-  flex: 0 0 40%;
+  flex: 0 0 36%;
   min-width: 0;
 }
 
@@ -940,7 +940,7 @@ a {
 
 /* ── 대체 간식 값 표기 ────────────────────── */
 .alt-val {
-  flex: 0 0 62px;
+  flex: 0 0 90px;
   text-align: right;
 }
 
@@ -950,14 +950,16 @@ a {
   font-weight: 700;
   color: var(--green);
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .alt-val em {
   display: block;
   font-style: normal;
-  font-size: 10.5px;
+  font-size: 10px;
   color: var(--accent);
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 /* ── 공통: 작은 버튼·오류 문구 ─────────────── */
@@ -1856,13 +1858,6 @@ a {
   letter-spacing: 0.02em;
   font-variant-numeric: tabular-nums;
   vertical-align: middle;
-}
-
-.item-no.big {
-  flex: 0 0 auto;
-  margin: 0 6px 0 2px;
-  padding: 2px 7px;
-  font-size: 11px;
 }
 
 /* 헤더의 어드민(기어) 버튼 */

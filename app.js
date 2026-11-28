@@ -370,7 +370,7 @@ function productThumb(product) {
 function filteredProducts() {
   return listProducts().filter((p) => {
     if (state.category !== 'all' && p.category !== state.category) return false;
-    return matchesProductQuery(p, state.q);
+    return matchesProductQuery(p, state.q, { includeItemNo: false });
   });
 }
 
@@ -403,7 +403,7 @@ function renderHomeFeed() {
       return `<li><a class="item" href="#/p/${p.id}">
         <span class="thumb" style="${thumbStyle(m)}"></span>
         <span class="info">
-          ${brandBadge(p.brand)}${p.itemNo ? `<span class="item-no" title="아이템 번호">${formatItemNo(p.itemNo)}</span>` : ''}
+          ${brandBadge(p.brand)}
           <b>${esc(p.name)}</b>
           <em>${fmtAmount(p.weight)}${p.unit} · ${p.kcal} kcal</em>
         </span>
@@ -520,7 +520,7 @@ function renderDetail(product) {
           <span class="bar"><span style="width:${((a.sugar100 / maxSugar) * 100).toFixed(0)}%"></span></span>
           <span class="bar sodium"><span style="width:${((a.sodium100 / maxSodium) * 100).toFixed(0)}%"></span></span>
         </span>
-        <span class="alt-val"><b>당 ${a.sugar100}g</b><em>나 ${a.sodium100}mg</em></span>
+        <span class="alt-val"><b>당 ${a.sugar100}g</b><em>나트륨 ${a.sodium100}mg</em></span>
       </div>`,
     )
     .join('');
@@ -531,7 +531,6 @@ function renderDetail(product) {
     <header class="topbar">
       <button class="back-btn" id="back" aria-label="뒤로">‹</button>
       <span class="title">${esc(model.name)}</span>
-      ${product.itemNo ? `<span class="item-no big" aria-label="아이템 번호 ${product.itemNo}">${formatItemNo(product.itemNo)}</span>` : ''}
       ${authChipHtml()}
     </header>
     <div class="card-wrap" id="card-wrap">${svg}</div>
