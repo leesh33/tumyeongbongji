@@ -136,13 +136,15 @@ test('Gemini 요청에 사진과 JSON 지시가 들어간다', () => {
   assert.match(prompt, /케이스 A/);
   assert.match(prompt, /케이스 B/);
   assert.match(prompt, /product_lookup/);
-  // 구조화 출력은 도구와 함께 못 쓰므로 responseMimeType은 보내지 않는다.
+  // 구조화 출력은 도구와 함께 못 쓰므로 grounding을 켜면 responseMimeType은 보내지 않는다.
   assert.equal(body.generationConfig.responseMimeType, undefined);
 });
 
-test('search:false면 도구 없이 보낸다(무료 등급 기본)', () => {
+test('search:false면 도구 없이 JSON 모드로 보낸다(무료 등급 기본)', () => {
   const body = buildGeminiRequest({ imageBase64: PNG, mimeType: 'image/png' }, '', { search: false });
   assert.equal(body.tools, undefined);
+  assert.equal(body.generationConfig.responseMimeType, 'application/json');
+  assert.equal(body.generationConfig.thinkingConfig.thinkingLevel, 'low');
 });
 
 /* ── 응답 파싱 ───────────────────────────────────── */
