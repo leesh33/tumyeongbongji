@@ -2484,19 +2484,24 @@ async function svgToBlob(svgEl, targetWidth = 1080) {
   clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
   clone.setAttribute('width', canvas.width);
   clone.setAttribute('height', canvas.height);
-  // 카드 PNG에는 Gowun Dodum 글꼴을 SVG 안에 심어서 내보낸다(문서 폰트는 <img>에 전달되지 않는다)
+  // 카드 PNG에는 Paperlogy 글꼴을 SVG 안에 심어서 내보낸다(문서 폰트는 <img>에 전달되지 않는다)
   const serialized = new XMLSerializer().serializeToString(clone);
   const xml = await embedCardFont(serialized);
-  const url = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(xml)}`;
+  // 굵기별 폰트가 base64로 들어가 SVG가 커지므로 data: 대신 blob URL로 넘긴다(모바일 Safari의 data URL 길이 제한 회피)
+  const url = URL.createObjectURL(new Blob([xml], { type: 'image/svg+xml;charset=utf-8' }));
 
   const img = new Image();
   img.decoding = 'sync';
-  await new Promise((resolve, reject) => {
-    img.onload = resolve;
-    img.onerror = () => reject(new Error('svg-load-failed'));
-    img.src = url;
-  });
-  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+  try {
+    await new Promise((resolve, reject) => {
+      img.onload = resolve;
+      img.onerror = () => reject(new Error('svg-load-failed'));
+      img.src = url;
+    });
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+  } finally {
+    URL.revokeObjectURL(url);
+  }
 
   return await new Promise((resolve) => canvas.toBlob((b) => resolve(b), 'image/png', 0.95));
 }
