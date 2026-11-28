@@ -88,12 +88,12 @@ function isGroundingRefusal(status, message) {
   return status === 400 && /grounding|google_search|tool/i.test(message);
 }
 
-async function generate(apiKey, image, { search, extra = '', json, thinking, timeoutMs = REQUEST_TIMEOUT_MS }) {
+async function generate(apiKey, image, { search, extra = '', json, thinking, timeoutMs = REQUEST_TIMEOUT_MS, model = MODEL }) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   const started = Date.now();
   try {
-    const res = await fetch(geminiUrl(MODEL), {
+    const res = await fetch(geminiUrl(model), {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'x-goog-api-key': apiKey },
       body: JSON.stringify(buildGeminiRequest(image, extra, { search, json, thinking })),
@@ -235,11 +235,14 @@ export default async function handler(req, res) {
 
   // 진단용 스위치 (?debug=1 과 함께 쓸 때만 동작). 원인을 좁힌 뒤 지운다.
   const url = String(req.url || '');
-  const flag = (k) => new RegExp(`[?&]${k}=1\\b`).test(url) && /[?&]debug=1\b/.test(url);
+  const debugOn = /[?&]debug=1\b/.test(url);
+  const flag = (k) => debugOn && new RegExp(`[?&]${k}=1\\b`).test(url);
   const opts = {};
   if (flag('nojson')) opts.json = false;
   if (flag('nothink')) opts.thinking = null;
   if (flag('tools')) opts.search = true;
+  const modelParam = /[?&]model=([\w.-]{3,40})\b/.exec(url);
+  if (debugOn && modelParam) opts.model = modelParam[1];
   const timeoutParam = /[?&]timeout=(\d{1,5})\b/.exec(url);
   if (timeoutParam) opts.timeoutMs = Math.min(55_000, Math.max(3000, Number(timeoutParam[1])));
 
