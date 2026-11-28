@@ -125,3 +125,11 @@
 - **배포 설정**: `.vercelignore`에서 `package.json` 제외를 뺐습니다(빼면 `api/*.js`가 CJS로 해석되어 ESM import가 깨짐). `vercel.json`에 `functions["api/analyze-food.js"].maxDuration=30` 추가.
 - **테스트**: `node --test` **207/207 통과**(`test/analyze-food.test.js` 35개: 요청 검증·프롬프트·JSON 추출·정규화·요청 제한·핸들러 200/400/413/429/502/503/504, Gemini fetch 모킹).
 - **검증**: `tools/verify_vision.py` — 로컬(목 응답) 29/29, 390×844. 앞면 사진 → 제품명·용량·음료·원재료 + 배너, 성분표 `label-kr.png` → 75·320·100·37·4.6, 503 → 안내·다시 시도·직접 입력으로 카드 생성, Tesseract/CDN 요청 0, 가로 넘침 0, 콘솔 오류 0. 스크린샷 `verification/tumyeongbongji/vision-*.png`.
+
+### 라이브 E2E 결과 (2026-11-28, 390×844, 실제 Gemini 호출)
+
+- **앞면 "파파 ZOOS 배도라지" 사진** (`attachments/2026-11-28/1000000035-…jpg`) → **2.0초**에 `name "파파 ZOOS 배도라지"`, `category kids`, `servingG 100 / unit ml`, `kcal 45`, 포장에 보이는 원재료(배혼합농축액·도라지혼합농축액·모과농축액)를 채우고 추정 안내 배너에 note("포장 앞면 표기 확인(45kcal, 100ml) 및 AI가 아는 정보")를 표시. 나트륨·당류·지방은 추측하지 않고 비워 두어 "직접 채워 주세요"로 안내.
+- **뒷면 성분표** (`tools/label-kr.png`) → **3.0초**에 75g·320kcal·나트륨 100mg·당류 37g·지방 4.6g·탄수화물 66g·단백질 3.2g 을 정확히 채우고 추정 배너는 숨김.
+- 그 밖에 문구·가로 넘침 0·콘솔 오류 0·Tesseract/CDN 요청 0 확인. 캡처 `verification/tumyeongbongji/vision-live-*.png`, 기록 `vision-live.json`(22개 중 21개 PASS — 남은 1개는 검증 스크립트가 종류를 `drink`로만 기대했는데 실제 응답은 `kids`였던 것. 키즈 음료라 `kids`가 맞아 스크립트를 `drink|kids`로 고쳤습니다).
+- **한도 주의**: 무료 등급 키라 분당 5회·하루 20회 수준입니다. 앱 서버 제한(IP당 분당 8·하루 60)보다 Gemini 쪽 한도가 먼저 걸리면 429 `upstream_quota` → "지금은 AI 사진 인식을 쓸 수 없어요(요청 한도)" 안내와 함께 직접 입력으로 넘어갑니다. 공개 앱으로 오래 쓰려면 결제 연결이 필요합니다.
+- Google Search grounding은 무료 등급에서 안 되므로(429) 기본은 모델 지식으로 채우고 추정 배너로 알립니다. 유료 등급이면 `GEMINI_SEARCH_GROUNDING=1`.

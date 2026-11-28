@@ -188,7 +188,7 @@ with sync_playwright() as p:
     banner_text = page.inner_text('#ai-banner') if banner else ''
     check('앞면: 제품명 채움', bool(name), name)
     check('앞면: 용량·열량 채움', bool(weight) and bool(kcal), f'{weight} / {kcal}')
-    check('앞면: 종류를 음료로', cat == 'drink', cat)
+    check('앞면: 종류를 음료/키즈로', cat in ('drink', 'kids'), cat)
     check('앞면: 원재료 채움', bool(ing), ing)
     check('앞면: 추정 안내 배너 표시', not banner_hidden and '앞면 제품명' in banner_text, banner_text[:80])
     page.screenshot(path=str(OUT / f'vision-{TAG}-2-front.png'))
@@ -219,12 +219,13 @@ with sync_playwright() as p:
         check('요청: base64가 충분히 큼(>10KB)', all(s['base64_len'] > 10000 for s in shapes), [s['base64_len'] for s in shapes])
         check('요청: JPEG 앞머리', all(s['magic'].startswith('/9j/') for s in shapes), [s['magic'] for s in shapes])
 
-    # ── 5) API 오류(503)와 직접 입력 ────────────────────
+    # ── 5) API 오류(503, 목 전용)와 직접 입력 ──────────────
     page.click('#photo-remove')
-    scenario['name'], scenario['status'], scenario['body'] = 'error', 503, ERROR_REPLY
-    status = upload(page, LABEL_PHOTO)
-    check('오류: 친절한 안내', '지금 쓸 수 없어요' in status or '직접 적' in status, status)
-    check('오류: 다시 시도 버튼', page.inner_text('#ocr-btn').strip() == '다시 시도', page.inner_text('#ocr-btn'))
+    if MOCK:
+        scenario['name'], scenario['status'], scenario['body'] = 'error', 503, ERROR_REPLY
+        status = upload(page, LABEL_PHOTO)
+        check('오류: 친절한 안내', '지금 쓸 수 없어요' in status or '직접 적' in status, status)
+        check('오류: 다시 시도 버튼', page.inner_text('#ocr-btn').strip() == '다시 시도', page.inner_text('#ocr-btn'))
     page.fill('#f-name', '직접 적은 과자')
     page.fill('#f-weight', '60')
     page.fill('#f-kcal', '280')
