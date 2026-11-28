@@ -21,7 +21,7 @@ import {
   validateAnalyzeRequest,
 } from '../lib/analyze-food-core.js';
 
-const REQUEST_TIMEOUT_MS = 25_000;
+const REQUEST_TIMEOUT_MS = 55_000;
 const MODEL = String(process.env.GEMINI_MODEL || GEMINI_MODEL).trim();
 const searchEnabled = () => String(process.env.GEMINI_SEARCH_GROUNDING || '').trim() === '1';
 const JSON_ONLY =
@@ -91,6 +91,7 @@ function isGroundingRefusal(status, message) {
 async function generate(apiKey, image, { search, extra = '' }) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  const started = Date.now();
   try {
     const res = await fetch(geminiUrl(MODEL), {
       method: 'POST',
@@ -105,7 +106,7 @@ async function generate(apiKey, image, { search, extra = '' }) {
     } catch {
       payload = null;
     }
-    return { status: res.status, payload, raw: text };
+    return { status: res.status, payload, raw: text, ms: Date.now() - started };
   } finally {
     clearTimeout(timer);
   }
@@ -127,7 +128,7 @@ async function analyze(apiKey, image) {
     return {
       ok: false,
       ...mapUpstreamError(gen.status),
-      upstream: { status: gen.status, message: upstreamDetail(gen.payload) },
+      upstream: { status: gen.status, message: upstreamDetail(gen.payload), ms: gen.ms },
     };
   }
 
@@ -149,7 +150,7 @@ async function analyze(apiKey, image) {
     }
   }
 
-  if (result) return { ok: true, result, sources: parsed.sources };
+  if (result) return { ok: true, result, sources: parsed.sources, debug: { ms: gen.ms, status: gen.status } };
 
   console.warn('[analyze-food] unparsable output', { blocked: parsed.blocked, text: String(parsed.text).slice(0, 300) });
   if (parsed.blocked) {
@@ -250,7 +251,10 @@ export default async function handler(req, res) {
     // 원인 확인용: ?debug=1일 때만 Gemini가 준 오류 문장을 함께 돌려준다(키는 포함되지 않는다).
     const debug = /[?&]debug=1\b/.test(String(req.url || ''));
     const extra = out.upstream
-      ? { upstreamStatus: out.upstream.status, ...(debug ? { upstreamMessage: out.upstream.message } : {}) }
+      ? {
+          upstreamStatus: out.upstream.status,
+          ...(debug ? { upstreamMessage: out.upstream.message, upstreamMs: out.upstream.ms } : {}),
+        }
       : {};
     sendError(res, out.status, out.error, out.message, undefined, extra);
     return;
@@ -261,5 +265,6 @@ export default async function handler(req, res) {
     ...out.result,
     sources: out.sources,
     maxImageMb: MAX_IMAGE_MB,
+    ...(/[?&]debug=1\b/.test(String(req.url || '')) ? { debug: out.debug } : {}),
   });
 }
